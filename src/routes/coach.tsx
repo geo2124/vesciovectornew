@@ -427,7 +427,7 @@ function PlansTab({ coachName }: { coachName: string }) {
                   <div className="min-w-0">
                     <div className="truncate text-sm text-ink-100">{p.title}</div>
                     <div className="font-mono text-[10px] text-ink-400">
-                      {p.category} · {p.date} · {p.blocks.length} sections
+                      {p.category} · {p.date} · {(p.blocks ?? []).length} sections
                     </div>
                   </div>
                   <Chip

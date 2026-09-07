@@ -41,28 +41,29 @@ export function PlanEditor({
   coachLocked?: boolean;
 }) {
   const { db } = useDB();
-  const [openBlock, setOpenBlock] = useState<string | null>(value.blocks[0]?.id ?? null);
-  const total = value.blocks.reduce((s, b) => s + (b.minutes || 0), 0);
+  const [openBlock, setOpenBlock] = useState<string | null>((value.blocks ?? [])[0]?.id ?? null);
+  const blocks = value.blocks ?? [];
+  const total = blocks.reduce((s, b) => s + (b.minutes || 0), 0);
 
   function setBlock(id: string, patch: Partial<PlanBlock>) {
     onChange({
       ...value,
-      blocks: value.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+      blocks: blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)),
     });
   }
 
   function addBlock() {
     const b = newBlock();
-    onChange({ ...value, blocks: [...value.blocks, b] });
+    onChange({ ...value, blocks: [...blocks, b] });
     setOpenBlock(b.id);
   }
 
   function removeBlock(id: string) {
-    onChange({ ...value, blocks: value.blocks.filter((b) => b.id !== id) });
+    onChange({ ...value, blocks: blocks.filter((b) => b.id !== id) });
   }
 
   function moveBlock(index: number, dir: -1 | 1) {
-    const next = value.blocks.slice();
+    const next = blocks.slice();
     const target = index + dir;
     if (target < 0 || target >= next.length) return;
     const a = next[index]!;
@@ -113,7 +114,7 @@ export function PlanEditor({
           </span>
         </div>
         <div className="flex h-3 overflow-hidden rounded-full bg-ink-850">
-          {value.blocks.map((b, i) => (
+          {blocks.map((b, i) => (
             <div
               key={b.id}
               className={BLOCK_COLORS[i % BLOCK_COLORS.length]}
@@ -125,7 +126,7 @@ export function PlanEditor({
       </div>
 
       <div className="space-y-2">
-        {value.blocks.map((b, i) => {
+        {blocks.map((b, i) => {
           const open = openBlock === b.id;
           return (
             <div key={b.id} className="rounded-md bg-ink-850 ring-1 ring-ink-700">
@@ -217,7 +218,8 @@ export function PlanEditor({
 }
 
 export function PlanView({ plan }: { plan: Plan }) {
-  const total = plan.blocks.reduce((s, b) => s + (b.minutes || 0), 0);
+  const planBlocks = plan.blocks ?? [];
+  const total = planBlocks.reduce((s, b) => s + (b.minutes || 0), 0);
   return (
     <div className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -228,7 +230,7 @@ export function PlanView({ plan }: { plan: Plan }) {
         </span>
       </div>
       {plan.focus ? <div className="text-sm text-ink-300">Focus: {plan.focus}</div> : null}
-      {plan.blocks.map((b) => (
+      {planBlocks.map((b) => (
         <div key={b.id} className="rounded-md bg-ink-850 p-3 ring-1 ring-ink-700">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-ink-100">{b.name}</span>
