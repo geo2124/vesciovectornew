@@ -442,7 +442,7 @@ function Appearance() {
 }
 
 function DataAdmin() {
-  const { db, update } = useDB();
+  const { db, update, clearData, loadDemo } = useDB();
   const [openList, setOpenList] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
