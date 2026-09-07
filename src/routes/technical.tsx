@@ -199,9 +199,24 @@ function GameApproval() {
         title={game ? game.title : "Game"}
         meta={game ? `${game.date} · ${game.time} · ${game.status}` : ""}
         onClose={() => setOpenGame(null)}
-        footer={
-          game ? (
-            <>
+      >
+        {game ? (
+          <div className="space-y-3 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Detail label="Opponent / detail" value={game.detail} />
+              <Detail label="Date & time" value={`${game.date} · ${game.time}`} />
+              <Detail label="Branch" value={game.branch} />
+              <Detail label="Submitted by" value={game.coach} />
+              <Detail label="Status" value={game.status} />
+              <Detail label="Type" value={game.kind} />
+            </div>
+            <div>
+              <div className="label-mono">Squad checked in</div>
+              <div className="mt-1 font-mono text-xs text-ink-200">
+                {(db.attendance[game.id] ?? []).length} players marked present
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 onClick={() => {
                   setStatus(game.id, "Pre-approved");
@@ -222,25 +237,6 @@ function GameApproval() {
               <Button variant="ghost" onClick={() => setOpenGame(null)}>
                 Close
               </Button>
-            </>
-          ) : null
-        }
-      >
-        {game ? (
-          <div className="space-y-3 p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Detail label="Opponent / detail" value={game.detail} />
-              <Detail label="Date & time" value={`${game.date} · ${game.time}`} />
-              <Detail label="Branch" value={game.branch} />
-              <Detail label="Submitted by" value={game.coach} />
-              <Detail label="Status" value={game.status} />
-              <Detail label="Type" value={game.kind} />
-            </div>
-            <div>
-              <div className="label-mono">Squad checked in</div>
-              <div className="mt-1 font-mono text-xs text-ink-200">
-                {(db.attendance[game.id] ?? []).length} players marked present
-              </div>
             </div>
           </div>
         ) : null}
