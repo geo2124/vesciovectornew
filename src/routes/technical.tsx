@@ -171,7 +171,7 @@ function PracticePlans() {
               <Chip
                 tone={status === "Approved" ? "good" : status === "Returned" ? "warn" : "neutral"}
               >
-                {status.toUpperCase()}
+                {String(status).toUpperCase()}
               </Chip>
             </Td>
             <Td right>
@@ -245,7 +245,7 @@ function Seminars() {
               </div>
             </div>
             <span className="ml-auto">
-              <Chip>{att.toUpperCase()}</Chip>
+              <Chip>{String(att).toUpperCase()}</Chip>
             </span>
           </div>
         ))}
@@ -278,7 +278,7 @@ function CompletedGames() {
           <Row key={g}>
             <Td strong>{g}</Td>
             <Td>
-              <span className={`font-mono text-xs ${r.startsWith("W") ? "text-good" : "text-bad"}`}>
+              <span className={`font-mono text-xs ${String(r).startsWith("W") ? "text-good" : "text-bad"}`}>
                 {r}
               </span>
             </Td>

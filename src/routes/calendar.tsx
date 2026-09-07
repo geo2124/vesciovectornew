@@ -64,7 +64,7 @@ function CalendarPage() {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {Object.keys(kindTone).map((k) => (
-          <Chip key={k} tone={kindTone[k]}>
+          <Chip key={k} tone={kindTone[k] ?? "neutral"}>
             {k.toUpperCase()}
           </Chip>
         ))}
@@ -165,7 +165,7 @@ function DayList() {
               ) : (
                 <span className="flex-1 font-mono text-[10px] text-ink-700">—</span>
               )}
-              {ev ? <Chip tone={kindTone[ev.kind]}>{ev.kind.toUpperCase()}</Chip> : null}
+              {ev ? <Chip tone={kindTone[ev.kind] ?? "neutral"}>{ev.kind.toUpperCase()}</Chip> : null}
             </div>
           );
         })}

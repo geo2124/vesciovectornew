@@ -212,8 +212,8 @@ function Games() {
                 <div className="truncate text-sm text-ink-100">{g}</div>
                 <div className="font-mono text-[10px] text-ink-400">{d}</div>
               </div>
-              <Chip tone={r.startsWith("W") ? "good" : r.startsWith("L") ? "bad" : "accent"}>
-                {r.toUpperCase()}
+              <Chip tone={String(r).startsWith("W") ? "good" : String(r).startsWith("L") ? "bad" : "accent"}>
+                {String(r).toUpperCase()}
               </Chip>
             </div>
           ))}
@@ -287,7 +287,7 @@ function Plans() {
             <div key={p} className="flex items-center justify-between py-2.5">
               <span className="text-sm text-ink-100">{p}</span>
               <Chip tone={s === "Approved" ? "good" : s === "In review" ? "warn" : "neutral"}>
-                {s.toUpperCase()}
+                {String(s).toUpperCase()}
               </Chip>
             </div>
           ))}

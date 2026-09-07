@@ -30,9 +30,9 @@ export function Panel({
   children,
   className = "",
 }: {
-  title?: string;
-  meta?: string;
-  action?: ReactNode;
+  title?: string | undefined;
+  meta?: string | undefined;
+  action?: ReactNode | undefined;
   children: ReactNode;
   className?: string;
 }) {
@@ -60,8 +60,8 @@ export function Stat({
 }: {
   label: string;
   value: string;
-  note?: string;
-  accent?: boolean;
+  note?: string | undefined;
+  accent?: boolean | undefined;
 }) {
   return (
     <div className="panel tick-diag relative overflow-hidden p-4">
@@ -108,7 +108,7 @@ export function Chip({
   tone = "neutral",
 }: {
   children: ReactNode;
-  tone?: "neutral" | "accent" | "good" | "warn" | "bad";
+  tone?: "neutral" | "accent" | "good" | "warn" | "bad" | undefined;
 }) {
   const tones: Record<string, string> = {
     neutral: "bg-ink-800 text-ink-200",
@@ -200,9 +200,9 @@ export function Td({
   strong,
 }: {
   children: ReactNode;
-  hide?: boolean;
-  right?: boolean;
-  strong?: boolean;
+  hide?: boolean | undefined;
+  right?: boolean | undefined;
+  strong?: boolean | undefined;
 }) {
   return (
     <td
