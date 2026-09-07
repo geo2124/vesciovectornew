@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { academy } from "@/lib/mock-data";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
+import { ThemeToggle } from "@/lib/theme";
 
 type NavItem = { to: string; label: string; meta?: string };
 

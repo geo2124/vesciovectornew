@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Chip } from "@/components/kit";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
+import { ThemeToggle } from "@/lib/theme";
 import { players, sessions } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/coach")({
