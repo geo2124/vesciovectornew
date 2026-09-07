@@ -1,8 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { Button, Chip, FieldGrid, Panel } from "@/components/kit";
+import {
+  Button,
+  Chip,
+  Field,
+  Input,
+  Modal,
+  Panel,
+  Select,
+} from "@/components/kit";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
+import { useDB } from "@/lib/data-store";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -15,15 +24,17 @@ export const Route = createFileRoute("/settings")({
       },
       { property: "og:title", content: "System Settings — Vescio Vector" },
       { property: "og:description", content: "Brand, configure and control the whole system." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SettingsPage,
 });
 
-const tabs = ["UI settings", "Data administration", "Communications"] as const;
+const tabs = ["Identity", "Data administration", "Communications"] as const;
 
 function SettingsPage() {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("UI settings");
+  const [tab, setTab] = useState<(typeof tabs)[number]>("Identity");
 
   return (
     <AppShell crumb="CONTROL / SETTINGS" title="System Settings">
@@ -43,211 +54,382 @@ function SettingsPage() {
         </div>
       </div>
 
-      {tab === "UI settings" ? <UiSettings /> : null}
+      {tab === "Identity" ? <Identity /> : null}
       {tab === "Data administration" ? <DataAdmin /> : null}
       {tab === "Communications" ? <Communications /> : null}
     </AppShell>
   );
 }
 
-function UiSettings() {
+function Identity() {
+  const { db, update, resetDemo } = useDB();
+  const [form, setForm] = useState(db.academy);
+  const [saved, setSaved] = useState(false);
+
+  function save() {
+    update((d) => ({ ...d, academy: form }));
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 2000);
+  }
+
+  function uploadLogo(file: File | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setForm({ ...form, logo: String(reader.result) });
+    reader.readAsDataURL(file);
+  }
+
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
       <div className="space-y-4">
-        <Panel title="Identity">
-          <FieldGrid
-            fields={[
-              { label: "Software name", hint: "Vescio Vector" },
-              { label: "Academy name", hint: "Alba Academy" },
-              { label: "Light mode logo", hint: "upload" },
-              { label: "Dark mode logo", hint: "upload" },
-              { label: "Favicon", hint: "upload or generate from logo" },
-              { label: "Sport theme", hint: "Basketball / Football / Volleyball" },
-            ]}
-          />
+        <Panel title="Academy identity" meta="Used across the workspace and the coach portal">
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <Field label="Academy name">
+              <Input value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+            </Field>
+            <Field label="Workspace URL">
+              <Input value={form.url} onChange={(v) => setForm({ ...form, url: v })} />
+            </Field>
+            <Field label="Sport theme">
+              <Select
+                value={form.sport}
+                onChange={(v) => setForm({ ...form, sport: v as typeof form.sport })}
+                options={["Basketball", "Football", "Volleyball"]}
+              />
+            </Field>
+            <Field label="Currency">
+              <Select
+                value={form.currency}
+                onChange={(v) => setForm({ ...form, currency: v })}
+                options={["USD", "EUR", "LBP", "AED", "SAR"]}
+              />
+            </Field>
+            <Field label="Package">
+              <Select
+                value={form.plan}
+                onChange={(v) => setForm({ ...form, plan: v })}
+                options={["Starter", "Pro", "Elite"]}
+              />
+            </Field>
+            <Field label="Renewal">
+              <Input value={form.renews} onChange={(v) => setForm({ ...form, renews: v })} />
+            </Field>
+            <Field label="Player limit">
+              <Input
+                type="number"
+                value={String(form.playersLimit)}
+                onChange={(v) => setForm({ ...form, playersLimit: Number(v) || 0 })}
+              />
+            </Field>
+            <Field label="Branch limit">
+              <Input
+                type="number"
+                value={String(form.branchesLimit)}
+                onChange={(v) => setForm({ ...form, branchesLimit: Number(v) || 0 })}
+              />
+            </Field>
+            <Field label="Academy logo" hint="PNG or SVG, shown in the sidebar">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => uploadLogo(e.target.files?.[0])}
+                className="mt-1.5 w-full rounded-md bg-ink-850 px-3 py-2 font-ui text-sm text-ink-200 ring-1 ring-ink-700 file:mr-3 file:rounded file:border-0 file:bg-court-500 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-ink-950"
+              />
+            </Field>
+          </div>
+          <div className="flex items-center gap-2 border-t border-ink-800 px-4 py-3">
+            <Button onClick={save}>Save settings</Button>
+            <Button variant="ghost" onClick={() => setForm(db.academy)}>
+              Revert
+            </Button>
+            {saved ? <Chip tone="good">SAVED</Chip> : null}
+          </div>
         </Panel>
 
-        <Panel title="Appearance" meta="Colours, navigation and buttons">
-          <div className="grid gap-4 p-4 sm:grid-cols-2">
-            <div>
-              <div className="label-mono mb-2">Accent colour</div>
-              <div className="flex gap-2">
-                {["bg-court-500", "bg-good", "bg-warn", "bg-bad", "bg-ink-200"].map((c, i) => (
-                  <span
-                    key={c}
-                    className={`h-8 w-8 rounded ${c} ${i === 0 ? "ring-2 ring-ink-100" : ""}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="label-mono mb-2">Surface</div>
-              <div className="flex gap-2">
-                <Chip tone="accent">INK DARK</Chip>
-                <Chip>PAPER LIGHT</Chip>
-              </div>
-            </div>
-            <div>
-              <div className="label-mono mb-2">Corner radius</div>
-              <div className="flex gap-2">
-                <Chip>SHARP</Chip>
-                <Chip tone="accent">SOFT</Chip>
-                <Chip>ROUND</Chip>
-              </div>
-            </div>
-            <div>
-              <div className="label-mono mb-2">Density</div>
-              <div className="flex gap-2">
-                <Chip tone="accent">COMPACT</Chip>
-                <Chip>COMFORTABLE</Chip>
-              </div>
-            </div>
-            <div>
-              <div className="label-mono mb-2">Navigation</div>
-              <div className="flex gap-2">
-                <Chip tone="accent">SIDEBAR</Chip>
-                <Chip>TOP BAR</Chip>
-              </div>
-            </div>
-            <div>
-              <div className="label-mono mb-2">Dashboard tiles</div>
-              <div className="flex gap-2">
-                <Chip tone="accent">4 UP</Chip>
-                <Chip>6 UP</Chip>
-              </div>
-            </div>
+        <Panel title="Payment deadlines" meta="Counted from one month after registration">
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <Field label="Soft deadline (days)" hint="shows a payment warning">
+              <Input
+                type="number"
+                value={String(form.softDeadline)}
+                onChange={(v) => setForm({ ...form, softDeadline: Number(v) || 0 })}
+              />
+            </Field>
+            <Field label="Hard deadline (days)" hint="blocks attendance">
+              <Input
+                type="number"
+                value={String(form.hardDeadline)}
+                onChange={(v) => setForm({ ...form, hardDeadline: Number(v) || 0 })}
+              />
+            </Field>
           </div>
-          <div className="flex gap-2 border-t border-ink-800 px-4 py-3">
-            <Button>Save appearance</Button>
-            <Button variant="ghost">Reset to defaults</Button>
+          <div className="border-t border-ink-800 px-4 py-3">
+            <Button onClick={save}>Save deadlines</Button>
           </div>
         </Panel>
       </div>
 
-      <Panel title="Support">
-        <FieldGrid
-          fields={[
-            { label: "Support phone", hint: "+961 …" },
-            { label: "Support email", hint: "help@…" },
-          ]}
-        />
-        <div className="border-t border-ink-800 p-4">
-          <div className="label-mono mb-2">Live preview</div>
-          <div className="rounded-md bg-ink-850 p-3 ring-1 ring-ink-700">
-            <div className="flex items-center gap-2">
-              <img src={markAsset.url} alt="Vescio Vector" className="h-7 w-7 object-contain" />
-              <span className="font-display text-sm text-ink-100">Alba Academy</span>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Button>Primary</Button>
-              <Button variant="ghost">Secondary</Button>
+      <div className="space-y-4">
+        <Panel title="Support & preview">
+          <div className="grid gap-3 p-4">
+            <Field label="Support phone">
+              <Input
+                value={form.supportPhone}
+                onChange={(v) => setForm({ ...form, supportPhone: v })}
+              />
+            </Field>
+            <Field label="Support email">
+              <Input
+                value={form.supportEmail}
+                onChange={(v) => setForm({ ...form, supportEmail: v })}
+              />
+            </Field>
+          </div>
+          <div className="border-t border-ink-800 p-4">
+            <div className="label-mono mb-2">Live preview</div>
+            <div className="rounded-md bg-ink-850 p-3 ring-1 ring-ink-700">
+              <div className="flex items-center gap-2">
+                <img
+                  src={form.logo ?? markAsset.url}
+                  alt={form.name}
+                  className="h-7 w-7 object-contain"
+                />
+                <span className="font-display text-sm text-ink-100">{form.name}</span>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button>Primary</Button>
+                <Button variant="ghost">Secondary</Button>
+              </div>
             </div>
           </div>
-        </div>
-      </Panel>
+        </Panel>
+
+        <Panel title="Danger zone" meta="Development data">
+          <div className="space-y-3 p-4">
+            <p className="text-sm text-ink-300">
+              Reset this workspace back to the demo records that ship with the dev version.
+            </p>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (window.confirm("Reset all workspace data to the demo set?")) resetDemo();
+              }}
+            >
+              Reset workspace data
+            </Button>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
 
 function DataAdmin() {
-  const dropdowns = [
-    "Age categories",
-    "Staff positions",
-    "Coach levels",
-    "Game types",
-    "Session types",
-    "Merch categories",
-    "Sizes",
-    "Expense accounts",
-  ];
-  const featuresOn = ["Multi-branch", "Merchandise", "Accounting", "Coach portal"];
-  const featuresOff = ["Geo-fence check-in", "Technical portal quizzes", "WhatsApp broadcast"];
+  const { db, update } = useDB();
+  const [openList, setOpenList] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+
+  const lists = db.lists;
+  const options = openList ? (lists[openList] ?? []) : [];
+
+  function addOption() {
+    if (!openList || !draft.trim()) return;
+    update((d) => ({
+      ...d,
+      lists: { ...d.lists, [openList]: [...(d.lists[openList] ?? []), draft.trim()] },
+    }));
+    setDraft("");
+  }
+
+  function removeOption(value: string) {
+    if (!openList) return;
+    update((d) => ({
+      ...d,
+      lists: { ...d.lists, [openList]: (d.lists[openList] ?? []).filter((o) => o !== value) },
+    }));
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-      <div className="space-y-4">
-        <Panel title="Dropdown administration" meta="Add, edit or remove options">
-          <div className="divide-y divide-ink-800">
-            {dropdowns.map((d) => (
-              <div key={d} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-sm text-ink-200">{d}</span>
-                <div className="flex items-center gap-2">
-                  <Chip>+ ADD</Chip>
-                  <span className="font-mono text-[10px] text-court-400">MANAGE ›</span>
-                </div>
+      <Panel title="Dropdown administration" meta="Add or remove the options used in every form">
+        <div className="divide-y divide-ink-800">
+          {Object.entries(lists).map(([name, values]) => (
+            <div key={name} className="flex items-center justify-between px-4 py-2.5">
+              <div>
+                <span className="text-sm text-ink-200">{name}</span>
+                <div className="font-mono text-[10px] text-ink-400">{values.length} options</div>
               </div>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="Payment deadlines">
-          <FieldGrid
-            fields={[
-              { label: "Soft deadline (days)", hint: "7 — shows payment warning" },
-              { label: "Hard deadline (days)", hint: "30 — blocks attendance" },
-            ]}
-          />
-          <div className="border-t border-ink-800 px-4 py-3 text-xs text-ink-400">
-            Counted from one month after the player registration date.
-          </div>
-        </Panel>
-      </div>
-
-      <Panel title="Package features">
-        <div className="space-y-2 p-4">
-          {featuresOn.map((f) => (
-            <div key={f} className="flex items-center justify-between">
-              <span className="text-sm text-ink-200">{f}</span>
-              <Chip tone="good">ACTIVE</Chip>
-            </div>
-          ))}
-          {featuresOff.map((f) => (
-            <div key={f} className="flex items-center justify-between">
-              <span className="text-sm text-ink-400">{f}</span>
-              <Chip tone="warn">UPGRADE</Chip>
+              <button
+                type="button"
+                onClick={() => setOpenList(name)}
+                className="font-mono text-[10px] text-court-400"
+              >
+                MANAGE ›
+              </button>
             </div>
           ))}
         </div>
       </Panel>
+
+      <Panel title="Package features" meta="What this academy can reach">
+        <div className="space-y-2 p-4">
+          {[
+            ["Multi-branch", db.branches.length > 1],
+            ["Merchandise", true],
+            ["Accounting", true],
+            ["Coach portal", db.coaches.some((c) => c.portal)],
+            ["Technical portal", true],
+          ].map(([label, on]) => (
+            <div key={String(label)} className="flex items-center justify-between">
+              <span className="text-sm text-ink-200">{String(label)}</span>
+              <Chip tone={on ? "good" : "warn"}>{on ? "ACTIVE" : "UPGRADE"}</Chip>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Modal
+        open={openList !== null}
+        title={openList ?? ""}
+        meta="These options appear in the matching dropdowns"
+        onClose={() => setOpenList(null)}
+      >
+        <div className="space-y-2 p-4">
+          {options.map((o) => (
+            <div
+              key={o}
+              className="flex items-center justify-between rounded bg-ink-850 px-3 py-2 ring-1 ring-ink-700"
+            >
+              <span className="text-sm text-ink-100">{o}</span>
+              <button
+                type="button"
+                onClick={() => removeOption(o)}
+                className="font-mono text-[10px] text-bad"
+              >
+                REMOVE
+              </button>
+            </div>
+          ))}
+          <div className="flex gap-2 pt-2">
+            <div className="flex-1">
+              <Input value={draft} onChange={setDraft} placeholder="New option" />
+            </div>
+            <div className="pt-1.5">
+              <Button onClick={addOption}>Add</Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
 function Communications() {
+  const { db, update } = useDB();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", scope: "" });
+  const [message, setMessage] = useState("");
+  const [target, setTarget] = useState(db.groups[0]?.name ?? "");
+  const [sent, setSent] = useState<string | null>(null);
+
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-      <Panel title="WhatsApp groups" action={<Button>+ New group</Button>}>
+      <Panel
+        title="WhatsApp groups"
+        action={
+          <Button
+            onClick={() => {
+              setForm({ name: "", scope: "" });
+              setOpen(true);
+            }}
+          >
+            + New group
+          </Button>
+        }
+      >
         <div className="divide-y divide-ink-800">
-          {[
-            ["Game results · U-14", "U-14 North, U-14 South"],
-            ["Achrafieh parents", "All Achrafieh teams"],
-            ["Coaches announcements", "All coaches"],
-          ].map(([name, scope]) => (
-            <div key={name} className="flex flex-wrap items-center gap-3 px-4 py-3">
+          {db.groups.map((g) => (
+            <div key={g.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <div>
-                <div className="text-sm font-medium text-ink-100">{name}</div>
-                <div className="font-mono text-[10px] text-ink-400">{scope}</div>
+                <div className="text-sm font-medium text-ink-100">{g.name}</div>
+                <div className="font-mono text-[10px] text-ink-400">{g.scope}</div>
               </div>
-              <span className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
                 <Chip tone="accent">BROADCAST</Chip>
-              </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update((d) => ({ ...d, groups: d.groups.filter((x) => x.id !== g.id) }))
+                  }
+                  className="font-mono text-[10px] text-bad"
+                >
+                  DELETE
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </Panel>
 
-      <Panel title="Broadcast a result">
-        <FieldGrid
-          fields={[
-            { label: "Game", hint: "U-14 vs Cedar BC" },
-            { label: "Target group", hint: "Game results · U-14" },
-            { label: "Message", hint: "auto-generated from result" },
-          ]}
-        />
-        <div className="flex gap-2 border-t border-ink-800 px-4 py-3">
-          <Button>Send to WhatsApp</Button>
+      <Panel title="Broadcast a message">
+        <div className="grid gap-3 p-4">
+          <Field label="Target group">
+            <Select
+              value={target}
+              onChange={setTarget}
+              options={db.groups.map((g) => g.name)}
+            />
+          </Field>
+          <Field label="Message">
+            <Input
+              value={message}
+              onChange={setMessage}
+              placeholder="U-14 won 78–64 against Cedar BC"
+            />
+          </Field>
         </div>
+        <div className="flex items-center gap-2 border-t border-ink-800 px-4 py-3">
+          <Button
+            onClick={() => {
+              if (!message.trim()) return;
+              setSent(`${message} → ${target}`);
+              setMessage("");
+            }}
+          >
+            Send to WhatsApp
+          </Button>
+          {sent ? <Chip tone="good">QUEUED</Chip> : null}
+        </div>
+        {sent ? (
+          <div className="border-t border-ink-800 px-4 py-3 font-mono text-[10px] text-ink-400">
+            Last queued: {sent}
+          </div>
+        ) : null}
       </Panel>
+
+      <Modal
+        open={open}
+        title="New WhatsApp group"
+        onClose={() => setOpen(false)}
+        onSubmit={() => {
+          if (!form.name.trim()) return;
+          update((d) => ({
+            ...d,
+            groups: [...d.groups, { ...form, id: `g-${Date.now().toString(36)}` }],
+          }));
+          setOpen(false);
+        }}
+        submitLabel="Create group"
+      >
+        <div className="grid gap-3 p-4">
+          <Field label="Group name">
+            <Input value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+          </Field>
+          <Field label="Scope" hint="which teams or people it reaches">
+            <Input value={form.scope} onChange={(v) => setForm({ ...form, scope: v })} />
+          </Field>
+        </div>
+      </Modal>
     </div>
   );
 }

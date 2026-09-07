@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Chip } from "@/components/kit";
+import { useMemo, useState } from "react";
+import { Chip, Field, Input, Select } from "@/components/kit";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
 import { ThemeToggle } from "@/lib/theme";
-import { players, sessions } from "@/lib/mock-data";
+import { useDB } from "@/lib/data-store";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
@@ -16,6 +16,8 @@ export const Route = createFileRoute("/coach")({
       },
       { property: "og:title", content: "Coach Portal — Vescio Vector" },
       { property: "og:description", content: "Everything a coach needs, on the phone." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CoachPortal,
@@ -31,8 +33,33 @@ const glyph: Record<string, string> = {
   Profile: "●",
 };
 
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((p) => p[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 function CoachPortal() {
+  const { db, update } = useDB();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Home");
+  const [coachId, setCoachId] = useState(db.coaches[0]?.id ?? "");
+  const coach = db.coaches.find((c) => c.id === coachId) ?? db.coaches[0];
+
+  const mySessions = useMemo(
+    () => db.sessions.filter((s) => s.coach === coach?.name),
+    [db.sessions, coach?.name],
+  );
+
+  if (!coach) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-ink-950 text-ink-300">
+        No coaches yet.
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -54,30 +81,44 @@ function CoachPortal() {
         <div className="bg-ink-900 px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-md bg-court-500/15 font-mono text-sm text-court-400">
-              KH
+              {initials(coach.name)}
             </div>
-            <div className="leading-tight">
-              <div className="text-sm font-medium text-ink-100">Karim Haddad</div>
-              <div className="font-mono text-[10px] text-ink-400">Head · U-16 North</div>
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-sm font-medium text-ink-100">{coach.name}</div>
+              <div className="font-mono text-[10px] text-ink-400">
+                {coach.level} · {coach.branch}
+              </div>
             </div>
             <span className="ml-auto">
-              <Chip tone="good">CHECKED IN</Chip>
+              <Chip tone={coach.portal ? "good" : "warn"}>
+                {coach.portal ? "PORTAL ON" : "PORTAL OFF"}
+              </Chip>
             </span>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <MiniStat label="Sessions · May" value="26" />
-            <MiniStat label="Total" value="142" />
-            <MiniStat label="W–L" value="11–3" />
+
+          <div className="mt-3">
+            <Select
+              value={coachId}
+              onChange={setCoachId}
+              options={db.coaches.map((c) => c.id)}
+              labels={Object.fromEntries(db.coaches.map((c) => [c.id, c.name]))}
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <MiniStat label="Sessions" value={String(coach.sessions)} />
+            <MiniStat label="Target" value={String(coach.sessionTarget)} />
+            <MiniStat label="W–L" value={`${coach.wins}–${coach.losses}`} />
           </div>
         </div>
 
         <div className="px-4 py-4">
-          {tab === "Home" ? <Home /> : null}
-          {tab === "Calendar" ? <CalendarTab /> : null}
-          {tab === "Games" ? <Games /> : null}
+          {tab === "Home" ? <Home coachName={coach.name} sessions={mySessions} /> : null}
+          {tab === "Calendar" ? <CalendarTab sessions={mySessions} /> : null}
+          {tab === "Games" ? <Games coachName={coach.name} /> : null}
           {tab === "Docs" ? <Docs /> : null}
-          {tab === "Plans" ? <Plans /> : null}
-          {tab === "Profile" ? <Profile /> : null}
+          {tab === "Plans" ? <PlansTab coachName={coach.name} /> : null}
+          {tab === "Profile" ? <Profile coachId={coach.id} /> : null}
         </div>
       </div>
 
@@ -94,8 +135,7 @@ function CoachPortal() {
             <span className="font-mono text-[9px] uppercase tracking-widest">{t}</span>
           </button>
         ))}
-      </nav>
-    </div>
+      </nav>    </div>
   );
 }
 
@@ -117,108 +157,188 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Home() {
+type SessionLike = ReturnType<typeof useDB>["db"]["sessions"][number];
+
+function Home({ coachName, sessions }: { coachName: string; sessions: SessionLike[] }) {
+  const { db, update } = useDB();
+  const next = sessions.find((s) => s.status === "Live") ?? sessions[0];
+  const [openSession, setOpenSession] = useState<string | null>(null);
+
+  const active = openSession ?? (next && next.status === "Live" ? next.id : null);
+  const roster = db.players.filter((p) => p.branch === (next?.branch ?? ""));
+  const present = active ? (db.attendance[active] ?? []) : [];
+
+  function toggle(playerId: string) {
+    if (!active) return;
+    update((d) => {
+      const list = d.attendance[active] ?? [];
+      return {
+        ...d,
+        attendance: {
+          ...d.attendance,
+          [active]: list.includes(playerId)
+            ? list.filter((x) => x !== playerId)
+            : [...list, playerId],
+        },
+      };
+    });
+  }
+
+  if (!next) return <Card title="Next session">No sessions assigned to {coachName}.</Card>;
+
   return (
     <>
       <Card title="Next session">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded bg-court-500/15 font-mono text-xs text-court-400">
-            U16
+          <div className="grid h-10 w-10 place-items-center rounded bg-court-500/15 font-mono text-[10px] text-court-400">
+            {next.kind.slice(0, 4).toUpperCase()}
           </div>
-          <div className="leading-tight">
-            <div className="text-sm font-medium text-ink-100">U-16 North · Practice</div>
-            <div className="font-mono text-[10px] text-ink-400">Court A · 14:00 · within 300 m</div>
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-medium text-ink-100">{next.title}</div>
+            <div className="font-mono text-[10px] text-ink-400">
+              {next.detail} · {next.date} {next.time}
+            </div>
           </div>
         </div>
-        <button className="mt-3 w-full rounded-md bg-court-500 py-2.5 text-sm font-semibold text-ink-950">
+        <button
+          onClick={() => {
+            setOpenSession(next.id);
+            update((d) => ({
+              ...d,
+              sessions: d.sessions.map((s) => (s.id === next.id ? { ...s, status: "Live" } : s)),
+            }));
+          }}
+          className="mt-3 w-full rounded-md bg-court-500 py-2.5 text-sm font-semibold text-ink-950"
+        >
           Check in & open attendance
         </button>
       </Card>
 
-      <Card title="Attendance · U-16 North">
-        <div className="divide-y divide-ink-800">
-          {players.slice(0, 4).map((p) => (
-            <div key={p.id} className="flex items-center gap-2 py-2">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm text-ink-100">{p.name}</div>
-                {p.status !== "Active" ? (
-                  <div className="font-mono text-[9px] text-warn">
-                    {p.status === "Inactive" ? "BLOCKED · UNPAID" : "PAYMENT DUE"}
+      {active ? (
+        <Card title={`Attendance · ${present.length}/${roster.length} present`}>
+          <div className="divide-y divide-ink-800">
+            {roster.map((p) => {
+              const isPresent = present.includes(p.id);
+              const blocked = p.status === "Inactive";
+              return (
+                <div key={p.id} className="flex items-center gap-2 py-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm text-ink-100">{p.name}</div>
+                    {p.status !== "Active" ? (
+                      <div className="font-mono text-[9px] text-warn">
+                        {blocked ? "BLOCKED · UNPAID" : "PAYMENT DUE"}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-              <div className="flex gap-1">
-                {["P", "A", "E"].map((m, i) => (
-                  <span
-                    key={m}
-                    className={`grid h-7 w-7 place-items-center rounded font-mono text-[10px] ring-1 ${
-                      i === 0 && p.status !== "Inactive"
+                  <button
+                    type="button"
+                    disabled={blocked}
+                    onClick={() => toggle(p.id)}
+                    className={`grid h-8 w-16 place-items-center rounded font-mono text-[10px] ring-1 ${
+                      isPresent
                         ? "bg-court-500 text-ink-950 ring-court-500"
                         : "bg-ink-850 text-ink-300 ring-ink-700"
-                    }`}
+                    } ${blocked ? "opacity-40" : ""}`}
                   >
-                    {m}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+                    {isPresent ? "PRESENT" : "ABSENT"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
     </>
   );
 }
 
-function CalendarTab() {
+function CalendarTab({ sessions }: { sessions: SessionLike[] }) {
   return (
-    <Card title="My week">
-      <div className="space-y-2">
-        {sessions.map((s) => (
-          <div key={s.id} className="flex items-center gap-3">
-            <span className="w-14 font-mono text-[10px] text-ink-400">
-              {s.date.slice(8)}/{s.date.slice(5, 7)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm text-ink-100">{s.title}</div>
-              <div className="font-mono text-[10px] text-ink-400">
-                {s.time} · {s.branch}
+    <Card title="My schedule">
+      {sessions.length === 0 ? (
+        <div className="py-4 text-center font-mono text-[11px] text-ink-400">
+          Nothing scheduled.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sessions.map((s) => (
+            <div key={s.id} className="flex items-center gap-3">
+              <span className="w-14 font-mono text-[10px] text-ink-400">
+                {s.date.slice(8)}/{s.date.slice(5, 7)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm text-ink-100">{s.title}</div>
+                <div className="font-mono text-[10px] text-ink-400">
+                  {s.time} · {s.branch}
+                </div>
               </div>
+              <Chip tone={s.kind === "Game" ? "accent" : "neutral"}>{s.kind.toUpperCase()}</Chip>
             </div>
-            <Chip tone={s.kind === "Game" ? "accent" : "neutral"}>{s.kind.toUpperCase()}</Chip>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
 
-function Games() {
+function Games({ coachName }: { coachName: string }) {
+  const { db, update } = useDB();
+  const coach = db.coaches.find((c) => c.name === coachName)!;
+  const games = db.sessions.filter((s) => s.kind === "Game" && s.coach === coachName);
+
+  function record(result: "win" | "loss") {
+    update((d) => ({
+      ...d,
+      coaches: d.coaches.map((c) =>
+        c.id === coach.id
+          ? { ...c, wins: c.wins + (result === "win" ? 1 : 0), losses: c.losses + (result === "loss" ? 1 : 0) }
+          : c,
+      ),
+    }));
+  }
+
   return (
     <>
       <Card title="Record">
         <div className="grid grid-cols-2 gap-2">
-          <MiniStat label="Wins" value="11" />
-          <MiniStat label="Losses" value="3" />
+          <MiniStat label="Wins" value={String(coach.wins)} />
+          <MiniStat label="Losses" value={String(coach.losses)} />
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={() => record("win")}
+            className="flex-1 rounded-md bg-court-500 py-2 text-xs font-semibold text-ink-950"
+          >
+            Log a win
+          </button>
+          <button
+            onClick={() => record("loss")}
+            className="flex-1 rounded-md bg-ink-850 py-2 text-xs font-semibold text-ink-200 ring-1 ring-ink-700"
+          >
+            Log a loss
+          </button>
         </div>
       </Card>
-      <Card title="Games">
-        <div className="divide-y divide-ink-800">
-          {[
-            ["U-14 vs Cedar BC", "Today 17:30", "Upcoming"],
-            ["U-16 vs Antonine", "10 May", "L 55–61"],
-            ["U-16 vs Sagesse", "3 May", "W 71–58"],
-          ].map(([g, d, r]) => (
-            <div key={g} className="flex items-center gap-2 py-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm text-ink-100">{g}</div>
-                <div className="font-mono text-[10px] text-ink-400">{d}</div>
+      <Card title="My games">
+        {games.length === 0 ? (
+          <div className="py-4 text-center font-mono text-[11px] text-ink-400">No games yet.</div>
+        ) : (
+          <div className="divide-y divide-ink-800">
+            {games.map((g) => (
+              <div key={g.id} className="flex items-center gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm text-ink-100">{g.title}</div>
+                  <div className="font-mono text-[10px] text-ink-400">
+                    {g.date} · {g.time}
+                  </div>
+                </div>
+                <Chip tone={g.status === "Official" ? "good" : "accent"}>
+                  {g.status.toUpperCase()}
+                </Chip>
               </div>
-              <Chip tone={String(r).startsWith("W") ? "good" : String(r).startsWith("L") ? "bad" : "accent"}>
-                {String(r).toUpperCase()}
-              </Chip>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
     </>
   );
@@ -239,90 +359,143 @@ function Docs() {
   );
 }
 
-function Plans() {
+function PlansTab({ coachName }: { coachName: string }) {
+  const { db, update } = useDB();
+  const mine = db.plans.filter((p) => p.coach === coachName);
+  const [title, setTitle] = useState("");
+  const [focus, setFocus] = useState("");
+  const [category, setCategory] = useState(db.lists["Age categories"]?.[0] ?? "U-14");
+
+  function save(status: "Draft" | "Submitted") {
+    if (!title.trim()) return;
+    update((d) => ({
+      ...d,
+      plans: [
+        {
+          id: `pl-${Date.now().toString(36)}`,
+          title,
+          category,
+          coach: coachName,
+          focus,
+          date: new Date().toISOString().slice(0, 10),
+          status,
+        },
+        ...d.plans,
+      ],
+    }));
+    setTitle("");
+    setFocus("");
+  }
+
   return (
     <>
       <Card title="Practice plan builder">
-        <div className="text-sm text-ink-100">U-16 North · 22 May</div>
-        <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-ink-850">
-          <div className="w-[15%] bg-court-500" />
-          <div className="w-[40%] bg-good" />
-          <div className="w-[25%] bg-warn" />
-          <div className="w-[20%] bg-ink-700" />
-        </div>
-        <div className="mt-3 space-y-2">
-          {[
-            ["Warm-up", "10 min"],
-            ["Live 3v3", "25 min"],
-            ["Shooting lines", "15 min"],
-            ["Cool down", "10 min"],
-          ].map(([s, t]) => (
-            <div
-              key={s}
-              className="flex items-center justify-between rounded bg-ink-850 px-3 py-2 ring-1 ring-ink-700"
-            >
-              <span className="text-xs text-ink-100">{s}</span>
-              <span className="font-mono text-[10px] text-ink-400">{t}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 grid h-32 place-items-center rounded bg-ink-850 ring-1 ring-ink-700">
-          <span className="label-mono">Drill drawing board</span>
+        <div className="grid gap-3">
+          <Field label="Plan title">
+            <Input value={title} onChange={setTitle} placeholder="Transition week" />
+          </Field>
+          <Field label="Category">
+            <Select
+              value={category}
+              onChange={setCategory}
+              options={db.lists["Age categories"] ?? ["U-14"]}
+            />
+          </Field>
+          <Field label="Focus">
+            <Input value={focus} onChange={setFocus} placeholder="Fast break spacing" />
+          </Field>
         </div>
         <div className="mt-3 flex gap-2">
-          <button className="flex-1 rounded-md bg-ink-850 py-2 text-xs font-semibold text-ink-200 ring-1 ring-ink-700">
+          <button
+            onClick={() => save("Draft")}
+            className="flex-1 rounded-md bg-ink-850 py-2 text-xs font-semibold text-ink-200 ring-1 ring-ink-700"
+          >
             Save draft
           </button>
-          <button className="flex-1 rounded-md bg-court-500 py-2 text-xs font-semibold text-ink-950">
+          <button
+            onClick={() => save("Submitted")}
+            className="flex-1 rounded-md bg-court-500 py-2 text-xs font-semibold text-ink-950"
+          >
             Submit for approval
           </button>
         </div>
       </Card>
       <Card title="My plans">
-        <div className="divide-y divide-ink-800">
-          {[
-            ["Transition week", "In review"],
-            ["Pick & roll basics", "Approved"],
-            ["Rebounding block", "Draft"],
-          ].map(([p, s]) => (
-            <div key={p} className="flex items-center justify-between py-2.5">
-              <span className="text-sm text-ink-100">{p}</span>
-              <Chip tone={s === "Approved" ? "good" : s === "In review" ? "warn" : "neutral"}>
-                {String(s).toUpperCase()}
-              </Chip>
-            </div>
-          ))}
-        </div>
+        {mine.length === 0 ? (
+          <div className="py-4 text-center font-mono text-[11px] text-ink-400">No plans yet.</div>
+        ) : (
+          <div className="divide-y divide-ink-800">
+            {mine.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-2 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-sm text-ink-100">{p.title}</div>
+                  <div className="font-mono text-[10px] text-ink-400">
+                    {p.category} · {p.date}
+                  </div>
+                </div>
+                <Chip
+                  tone={
+                    p.status === "Approved"
+                      ? "good"
+                      : p.status === "Rejected"
+                        ? "bad"
+                        : p.status === "Submitted"
+                          ? "warn"
+                          : "neutral"
+                  }
+                >
+                  {p.status.toUpperCase()}
+                </Chip>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </>
   );
 }
 
-function Profile() {
+function Profile({ coachId }: { coachId: string }) {
+  const { db, update } = useDB();
+  const coach = db.coaches.find((c) => c.id === coachId)!;
+  const [form, setForm] = useState({ phone: coach.phone, email: coach.email });
+  const [saved, setSaved] = useState(false);
+
   return (
     <>
       <Card title="My details">
-        <div className="space-y-2 text-sm">
-          {[
-            ["Name", "Karim Haddad"],
-            ["Date of birth", "1988-03-14"],
-            ["Phone", "+961 3 402 118"],
-            ["Email", "karim@alba.io"],
-          ].map(([l, v]) => (
-            <div key={l} className="flex items-center justify-between">
-              <span className="text-ink-400">{l}</span>
-              <span className="text-ink-100">{v}</span>
-            </div>
-          ))}
+        <div className="grid gap-3">
+          <Field label="Name">
+            <Input value={coach.name} onChange={() => {}} />
+          </Field>
+          <Field label="Phone">
+            <Input value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+          </Field>
+          <Field label="Email">
+            <Input value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+          </Field>
         </div>
+        <button
+          onClick={() => {
+            update((d) => ({
+              ...d,
+              coaches: d.coaches.map((c) => (c.id === coachId ? { ...c, ...form } : c)),
+            }));
+            setSaved(true);
+            window.setTimeout(() => setSaved(false), 2000);
+          }}
+          className="mt-3 w-full rounded-md bg-court-500 py-2 text-xs font-semibold text-ink-950"
+        >
+          {saved ? "Saved" : "Save my details"}
+        </button>
       </Card>
       <Card title="Payments">
         <div className="space-y-2 text-sm">
           {[
-            ["Rate per session", "$45"],
-            ["Sessions this month", "26"],
-            ["Paid", "$1,020"],
-            ["Outstanding", "$1,150"],
+            ["Rate per session", `$${coach.rate}`],
+            ["Sessions this month", String(coach.sessions)],
+            ["Earned", `$${coach.rate * coach.sessions}`],
+            ["Outstanding", `$${coach.outstanding}`],
           ].map(([l, v]) => (
             <div key={l} className="flex items-center justify-between">
               <span className="text-ink-400">{l}</span>
