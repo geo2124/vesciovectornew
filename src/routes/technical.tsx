@@ -96,6 +96,8 @@ function TechnicalPage() {
 function GameApproval() {
   const { db, update } = useDB();
   const games = db.sessions.filter((s) => s.kind === "Game");
+  const [openGame, setOpenGame] = useState<string | null>(null);
+  const game = games.find((g) => g.id === openGame) ?? null;
 
   function setStatus(id: string, status: "Pre-approved" | "Official" | "Planned") {
     update((d) => ({
@@ -125,10 +127,14 @@ function GameApproval() {
           games.map((g) => (
             <Row key={g.id}>
               <Td strong>
-                <div className="leading-tight">
+                <button
+                  type="button"
+                  onClick={() => setOpenGame(g.id)}
+                  className="text-left leading-tight hover:text-court-400"
+                >
                   <div>{g.title}</div>
                   <div className="font-mono text-[10px] text-ink-400">{g.detail}</div>
-                </div>
+                </button>
               </Td>
               <Td>
                 <span className="font-mono text-xs">
@@ -178,6 +184,63 @@ function GameApproval() {
           ))
         )}
       </Table>
+    
+      <Modal
+        open={!!game}
+        title={game ? game.title : "Game"}
+        meta={game ? `${game.date} · ${game.time} · ${game.status}` : ""}
+        onClose={() => setOpenGame(null)}
+        footer={
+          game ? (
+            <>
+              <Button
+                onClick={() => {
+                  setStatus(game.id, "Pre-approved");
+                  setOpenGame(null);
+                }}
+              >
+                Approve game
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setStatus(game.id, "Official");
+                  setOpenGame(null);
+                }}
+              >
+                Make official
+              </Button>
+              <Button variant="ghost" onClick={() => setOpenGame(null)}>
+                Close
+              </Button>
+            </>
+          ) : null
+        }
+      >
+        {game ? (
+          <div className="space-y-3 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Detail label="Opponent / detail" value={game.detail} />
+              <Detail label="Date & time" value={`${game.date} · ${game.time}`} />
+              <Detail label="Branch" value={game.branch} />
+              <Detail label="Court" value={game.court} />
+              <Detail label="Submitted by" value={game.coach} />
+              <Detail label="Team" value={game.team} />
+              <Detail label="Status" value={game.status} />
+              <Detail
+                label="Result"
+                value={game.result && game.result.trim() ? game.result : "Not played yet"}
+              />
+            </div>
+            <div>
+              <div className="label-mono">Squad checked in</div>
+              <div className="mt-1 font-mono text-xs text-ink-200">
+                {(db.attendance[game.id] ?? []).length} players marked present
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </Panel>
   );
 }

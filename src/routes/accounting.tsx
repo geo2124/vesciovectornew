@@ -110,7 +110,7 @@ function AccountingPage() {
   function exportPdfReport() {
     exportPdf({
       title: "Financial report",
-      subtitle: `${type === "All" ? "All types" : type} · ${account === "All" ? "All accounts" : account}`,
+      subtitle: `${type || "All types"} · ${account || "All accounts"}`,
       academy: db.academy.name,
       logo: db.academy.logo,
       columns: reportColumns,
