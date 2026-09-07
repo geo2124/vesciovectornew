@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/lib/theme";
+import { DataProvider } from "@/lib/data-store";
 import {
   Outlet,
   Link,
