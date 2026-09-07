@@ -27,3 +27,12 @@
 
 ## Open items
 - [x] Logo received — Vescio Vector mark extracted, used in app shell, coach portal and favicon
+
+## Phase 1b — brand + theming (done)
+- [x] Palette rebuilt around the Vescio Vector teal mark (all tokens runtime variables)
+- [x] Light theme + dark/light switch (persists per browser, available in workspace, coach portal and wizard)
+- [x] Super-admin Client Console (/admin): provision client, URL, package, player limit, multi-branch, feature switches
+- [x] Tenant Setup Wizard (/setup): academy name, sport theme, logo upload, admin accounts; hides once completed
+
+## Next
+- [ ] Gmail sign-in + super-admin gate (geogo3@gmail.com), real per-client databases and deployment
