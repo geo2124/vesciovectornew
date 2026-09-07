@@ -4,6 +4,8 @@
  * every create / edit / delete survives reloads. Swaps to Lovable Cloud later
  * without touching screen code — the hooks below stay the same.
  */
+import type { Appearance } from "@/lib/appearance";
+import { defaultAppearance } from "@/lib/appearance";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -91,10 +93,14 @@ export type Academy = {
   hardDeadline: number;
 };
 
+export type { Appearance } from "@/lib/appearance";
+
 export type WhatsAppGroup = { id: string; name: string; scope: string };
 
 export type DB = {
   academy: Academy;
+  /** dark/light colour customisation + interface density */
+  appearance: Appearance;
   coaches: Coach[];
   players: Player[];
   teams: Team[];
@@ -137,6 +143,7 @@ const seedPlans: Plan[] = [
 
 
 export const emptyDB = (): DB => ({
+  appearance: defaultAppearance,
   academy: {
     name: seedAcademy.name,
     url: seedAcademy.url,
@@ -192,6 +199,7 @@ function migrate(db: DB): DB {
       review: typeof p.review === "string" ? p.review : "",
     })),
     attendance: db.attendance ?? {},
+    appearance: { ...defaultAppearance, ...(db.appearance ?? {}) },
     lists: db.lists ?? emptyDB().lists,
     groups: db.groups ?? [],
   };

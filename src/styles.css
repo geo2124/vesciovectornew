@@ -172,3 +172,8 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* Interface customisation: the court texture can be switched off in settings. */
+html[data-texture="off"] .tick-diag {
+  background-image: none;
+}

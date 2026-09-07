@@ -12,6 +12,9 @@ import {
 } from "@/components/kit";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
 import { useDB } from "@/lib/data-store";
+import { defaultAppearance, skinVars } from "@/lib/appearance";
+import type { Appearance as AppearanceConfig, Skin } from "@/lib/appearance";
+import { useTheme } from "@/lib/theme";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -31,7 +34,7 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-const tabs = ["Identity", "Data administration", "Communications"] as const;
+const tabs = ["Identity", "Appearance", "Data administration", "Communications"] as const;
 
 function SettingsPage() {
   const [tab, setTab] = useState<(typeof tabs)[number]>("Identity");
@@ -55,6 +58,7 @@ function SettingsPage() {
       </div>
 
       {tab === "Identity" ? <Identity /> : null}
+      {tab === "Appearance" ? <Appearance /> : null}
       {tab === "Data administration" ? <DataAdmin /> : null}
       {tab === "Communications" ? <Communications /> : null}
     </AppShell>
@@ -216,6 +220,219 @@ function Identity() {
               }}
             >
               Reset workspace data
+            </Button>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+
+const swatches: { key: keyof Skin; label: string; hint: string }[] = [
+  { key: "accent", label: "Accent", hint: "buttons, highlights, active items" },
+  { key: "background", label: "Page background", hint: "the deepest surface" },
+  { key: "surface", label: "Panels & cards", hint: "boxes sitting on the page" },
+  { key: "text", label: "Text", hint: "main reading colour" },
+];
+
+function ColorRow({
+  skin,
+  onChange,
+}: {
+  skin: Skin;
+  onChange: (s: Skin) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {swatches.map((sw) => (
+        <div key={sw.key} className="flex items-center gap-3 rounded-md bg-ink-850 p-2 ring-1 ring-ink-700">
+          <input
+            type="color"
+            aria-label={sw.label}
+            value={skin[sw.key]}
+            onChange={(e) => onChange({ ...skin, [sw.key]: e.target.value })}
+            className="h-9 w-12 cursor-pointer rounded border-0 bg-transparent p-0"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm text-ink-100">{sw.label}</div>
+            <div className="font-mono text-[10px] text-ink-400">{sw.hint}</div>
+          </div>
+          <input
+            value={skin[sw.key]}
+            onChange={(e) => onChange({ ...skin, [sw.key]: e.target.value })}
+            className="w-24 rounded bg-ink-900 px-2 py-1 text-right font-mono text-[11px] text-ink-200 ring-1 ring-ink-700 focus:outline-none"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SkinPreview({ skin, label }: { skin: Skin; label: string }) {
+  const v = skinVars(skin);
+  return (
+    <div
+      className="rounded-lg p-3"
+      style={{ background: v["--ink-950"], color: v["--ink-100"] }}
+    >
+      <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: v["--ink-400"] }}>
+        {label}
+      </div>
+      <div className="mt-2 rounded-md p-3" style={{ background: v["--ink-900"], boxShadow: `inset 0 0 0 1px ${v["--ink-800"]}` }}>
+        <div className="text-sm font-semibold">Team roster</div>
+        <div className="mt-1 font-mono text-[10px]" style={{ color: v["--ink-400"] }}>
+          14 players · 3 coaches
+        </div>
+        <div className="mt-3 flex gap-2">
+          <span
+            className="rounded px-3 py-1.5 text-xs font-semibold"
+            style={{ background: v["--court-500"], color: v["--primary-foreground"] }}
+          >
+            Primary
+          </span>
+          <span
+            className="rounded px-3 py-1.5 text-xs"
+            style={{ background: v["--ink-850"], color: v["--ink-200"], boxShadow: `inset 0 0 0 1px ${v["--ink-700"]}` }}
+          >
+            Secondary
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const presets: { name: string; value: Pick<AppearanceConfig, "dark" | "light"> }[] = [
+  { name: "Vector teal", value: { dark: defaultAppearance.dark, light: defaultAppearance.light } },
+  {
+    name: "Court orange",
+    value: {
+      dark: { accent: "#f97316", background: "#141313", surface: "#1f1d1c", text: "#f2ece8" },
+      light: { accent: "#c2410c", background: "#faf6f3", surface: "#ffffff", text: "#26201c" },
+    },
+  },
+  {
+    name: "Midnight blue",
+    value: {
+      dark: { accent: "#4f8ef7", background: "#0c1220", surface: "#151d31", text: "#e8eefb" },
+      light: { accent: "#2354c7", background: "#f4f6fb", surface: "#ffffff", text: "#161d2e" },
+    },
+  },
+  {
+    name: "Royal purple",
+    value: {
+      dark: { accent: "#a855f7", background: "#140f1c", surface: "#1e1729", text: "#eee7f7" },
+      light: { accent: "#7127c4", background: "#f7f4fb", surface: "#ffffff", text: "#1e1729" },
+    },
+  },
+];
+
+function Appearance() {
+  const { db, update } = useDB();
+  const { theme, toggle } = useTheme();
+  const current: AppearanceConfig = { ...defaultAppearance, ...(db.appearance ?? {}) };
+  const [form, setForm] = useState<AppearanceConfig>(current);
+  const [saved, setSaved] = useState(false);
+
+  function apply(next: AppearanceConfig) {
+    setForm(next);
+    update((d) => ({ ...d, appearance: next }));
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1500);
+  }
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+      <div className="space-y-4">
+        <Panel
+          title="Colour themes"
+          meta="Dark and light are styled separately — changes apply live"
+          action={
+            <>
+              <Chip tone={saved ? "good" : "neutral"}>{saved ? "SAVED" : `VIEWING ${theme.toUpperCase()}`}</Chip>
+              <Button variant="ghost" onClick={toggle}>
+                Preview {theme === "dark" ? "light" : "dark"}
+              </Button>
+            </>
+          }
+        >
+          <div className="grid gap-4 p-4 lg:grid-cols-2">
+            <div className="space-y-3">
+              <div className="label-mono">Dark theme</div>
+              <ColorRow skin={form.dark} onChange={(dark) => apply({ ...form, dark })} />
+              <SkinPreview skin={form.dark} label="Dark preview" />
+            </div>
+            <div className="space-y-3">
+              <div className="label-mono">Light theme</div>
+              <ColorRow skin={form.light} onChange={(light) => apply({ ...form, light })} />
+              <SkinPreview skin={form.light} label="Light preview" />
+            </div>
+          </div>
+        </Panel>
+
+        <Panel title="Interface" meta="Shape and density of the whole system">
+          <div className="grid gap-4 p-4 sm:grid-cols-2">
+            <Field label={`Corner radius · ${form.radius}px`}>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                value={form.radius}
+                onChange={(e) => apply({ ...form, radius: Number(e.target.value) })}
+                className="mt-3 w-full accent-court-500"
+              />
+            </Field>
+            <Field label={`Text size · ${form.fontSize}px`}>
+              <input
+                type="range"
+                min={13}
+                max={19}
+                value={form.fontSize}
+                onChange={(e) => apply({ ...form, fontSize: Number(e.target.value) })}
+                className="mt-3 w-full accent-court-500"
+              />
+            </Field>
+            <label className="flex items-center gap-3 rounded-md bg-ink-850 p-3 ring-1 ring-ink-700 sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={form.texture}
+                onChange={(e) => apply({ ...form, texture: e.target.checked })}
+                className="h-4 w-4 accent-court-500"
+              />
+              <span className="text-sm text-ink-100">Court texture behind headers</span>
+            </label>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="space-y-4">
+        <Panel title="Presets" meta="One click, then fine-tune">
+          <div className="grid gap-2 p-4">
+            {presets.map((p) => (
+              <button
+                key={p.name}
+                type="button"
+                onClick={() => apply({ ...form, dark: p.value.dark, light: p.value.light })}
+                className="flex items-center gap-3 rounded-md bg-ink-850 p-3 text-left ring-1 ring-ink-700 hover:ring-court-500"
+              >
+                <span className="flex gap-1">
+                  {[p.value.dark.accent, p.value.dark.background, p.value.light.accent, p.value.light.background].map(
+                    (c) => (
+                      <span key={c} className="h-5 w-5 rounded" style={{ background: c }} />
+                    ),
+                  )}
+                </span>
+                <span className="text-sm text-ink-100">{p.name}</span>
+              </button>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Restore" meta="Back to the Vescio Vector look">
+          <div className="p-4">
+            <Button variant="ghost" onClick={() => apply(defaultAppearance)}>
+              Reset appearance
             </Button>
           </div>
         </Panel>
