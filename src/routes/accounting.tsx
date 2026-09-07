@@ -20,6 +20,7 @@ import {
   Th,
   money,
 } from "@/components/kit";
+import { downloadCsv, exportPdf } from "@/lib/report";
 import { useDB } from "@/lib/data-store";
 import type { LedgerEntry } from "@/lib/data-store";
 
@@ -98,18 +99,29 @@ function AccountingPage() {
     setOpen(false);
   }
 
+  const reportColumns = ["Date", "Account", "Entry", "Type", "Amount", "Status"];
+  const reportRows = () =>
+    filtered.map((l) => [l.date, l.account, l.entry, l.type, money(l.amount), l.status]);
+
   function exportCsv() {
-    const rows = [
-      ["Date", "Account", "Entry", "Type", "Amount", "Status"],
-      ...filtered.map((l) => [l.date, l.account, l.entry, l.type, String(l.amount), l.status]),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "vescio-vector-ledger.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv("vescio-vector-ledger", reportColumns, reportRows());
+  }
+
+  function exportPdfReport() {
+    exportPdf({
+      title: "Financial report",
+      subtitle: `${type === "All" ? "All types" : type} · ${account === "All" ? "All accounts" : account}`,
+      academy: db.academy.name,
+      logo: db.academy.logo,
+      columns: reportColumns,
+      rows: reportRows(),
+      summary: [
+        { label: "Revenue", value: money(revenue) },
+        { label: "Expenses", value: money(expense) },
+        { label: "Net", value: money(revenue - expense) },
+        { label: "Outstanding", value: money(outstandingPlayers + outstandingCoaches) },
+      ],
+    });
   }
 
   return (
@@ -145,6 +157,9 @@ function AccountingPage() {
             />
             <Button variant="ghost" onClick={exportCsv}>
               Export CSV
+            </Button>
+            <Button variant="ghost" onClick={exportPdfReport}>
+              Export PDF
             </Button>
             <Button
               onClick={() => {
