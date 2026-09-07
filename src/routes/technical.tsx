@@ -6,7 +6,6 @@ import {
   Chip,
   EmptyState,
   Field,
-  Input,
   Modal,
   Panel,
   Row,
@@ -15,10 +14,14 @@ import {
   Stat,
   Table,
   Td,
+  Textarea,
   Th,
 } from "@/components/kit";
+import { PlanEditor, PlanView, emptyPlan } from "@/components/plan-editor";
+import type { PlanDraft } from "@/components/plan-editor";
 import { useDB } from "@/lib/data-store";
 import type { Plan } from "@/lib/data-store";
+
 
 export const Route = createFileRoute("/technical")({
   head: () => ({
