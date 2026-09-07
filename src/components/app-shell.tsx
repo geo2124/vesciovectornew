@@ -165,6 +165,7 @@ export function AppShell({
               <span className="h-1.5 w-1.5 animate-pulse bg-court-500" />
               DEV VERSION
             </div>
+            <ThemeToggle />
             <div className="grid h-9 w-9 place-items-center bg-ink-800 ring-1 ring-ink-700">
               <span className="font-mono text-xs text-ink-200">GM</span>
             </div>
