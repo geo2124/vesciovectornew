@@ -182,6 +182,21 @@ export const emptyDB = (): DB => ({
 
 const KEY = "vv-db";
 
+/** Keeps browsers that saved an older shape working after new fields ship. */
+function migrate(db: DB): DB {
+  return {
+    ...db,
+    plans: (db.plans ?? []).map((p) => ({
+      ...p,
+      blocks: Array.isArray(p.blocks) ? p.blocks : [],
+      review: typeof p.review === "string" ? p.review : "",
+    })),
+    attendance: db.attendance ?? {},
+    lists: db.lists ?? emptyDB().lists,
+    groups: db.groups ?? [],
+  };
+}
+
 type Ctx = {
   db: DB;
   ready: boolean;
@@ -198,7 +213,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(KEY);
-      if (raw) setDb({ ...emptyDB(), ...(JSON.parse(raw) as DB) });
+      if (raw) setDb(migrate({ ...emptyDB(), ...(JSON.parse(raw) as DB) }));
     } catch {
       /* storage unavailable — stay in memory */
     }
