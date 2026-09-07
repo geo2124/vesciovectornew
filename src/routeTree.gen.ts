@@ -21,6 +21,7 @@ import { Route as PersonnelRouteImport } from './routes/personnel'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as SessionsRouteImport } from './routes/sessions'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as TechnicalRouteImport } from './routes/technical'
 import { Route as UsersRouteImport } from './routes/users'
@@ -85,6 +86,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsRoute = TeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/players': typeof PlayersRoute
   '/sessions': typeof SessionsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/teams': typeof TeamsRoute
   '/technical': typeof TechnicalRoute
   '/users': typeof UsersRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/players': typeof PlayersRoute
   '/sessions': typeof SessionsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/teams': typeof TeamsRoute
   '/technical': typeof TechnicalRoute
   '/users': typeof UsersRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/players': typeof PlayersRoute
   '/sessions': typeof SessionsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/teams': typeof TeamsRoute
   '/technical': typeof TechnicalRoute
   '/users': typeof UsersRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sessions'
     | '/settings'
+    | '/setup'
     | '/teams'
     | '/technical'
     | '/users'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sessions'
     | '/settings'
+    | '/setup'
     | '/teams'
     | '/technical'
     | '/users'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sessions'
     | '/settings'
+    | '/setup'
     | '/teams'
     | '/technical'
     | '/users'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   PlayersRoute: typeof PlayersRoute
   SessionsRoute: typeof SessionsRoute
   SettingsRoute: typeof SettingsRoute
+  SetupRoute: typeof SetupRoute
   TeamsRoute: typeof TeamsRoute
   TechnicalRoute: typeof TechnicalRoute
   UsersRoute: typeof UsersRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teams': {
       id: '/teams'
       path: '/teams'
@@ -348,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayersRoute: PlayersRoute,
   SessionsRoute: SessionsRoute,
   SettingsRoute: SettingsRoute,
+  SetupRoute: SetupRoute,
   TeamsRoute: TeamsRoute,
   TechnicalRoute: TechnicalRoute,
   UsersRoute: UsersRoute,
