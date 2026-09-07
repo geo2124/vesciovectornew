@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Chip, Field, Input, Select } from "@/components/kit";
+import { PlanEditor, PlanView, emptyPlan } from "@/components/plan-editor";
+import type { PlanDraft } from "@/components/plan-editor";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
 import { ThemeToggle } from "@/lib/theme";
 import { useDB } from "@/lib/data-store";
@@ -362,49 +364,31 @@ function Docs() {
 function PlansTab({ coachName }: { coachName: string }) {
   const { db, update } = useDB();
   const mine = db.plans.filter((p) => p.coach === coachName);
-  const [title, setTitle] = useState("");
-  const [focus, setFocus] = useState("");
-  const [category, setCategory] = useState(db.lists["Age categories"]?.[0] ?? "U-14");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<PlanDraft>(
+    emptyPlan(coachName, db.lists["Age categories"]?.[0] ?? "U-14"),
+  );
+  const [viewing, setViewing] = useState<string | null>(null);
 
   function save(status: "Draft" | "Submitted") {
-    if (!title.trim()) return;
+    if (!draft.title.trim()) return;
+    const payload = { ...draft, coach: coachName, status };
     update((d) => ({
       ...d,
-      plans: [
-        {
-          id: `pl-${Date.now().toString(36)}`,
-          title,
-          category,
-          coach: coachName,
-          focus,
-          date: new Date().toISOString().slice(0, 10),
-          status,
-        },
-        ...d.plans,
-      ],
+      plans: editingId
+        ? d.plans.map((p) => (p.id === editingId ? { ...p, ...payload } : p))
+        : [{ ...payload, id: `pl-${Date.now().toString(36)}` }, ...d.plans],
     }));
-    setTitle("");
-    setFocus("");
+    setEditingId(null);
+    setDraft(emptyPlan(coachName, db.lists["Age categories"]?.[0] ?? "U-14"));
   }
+
+  const shown = viewing ? db.plans.find((p) => p.id === viewing) : null;
 
   return (
     <>
-      <Card title="Practice plan builder">
-        <div className="grid gap-3">
-          <Field label="Plan title">
-            <Input value={title} onChange={setTitle} placeholder="Transition week" />
-          </Field>
-          <Field label="Category">
-            <Select
-              value={category}
-              onChange={setCategory}
-              options={db.lists["Age categories"] ?? ["U-14"]}
-            />
-          </Field>
-          <Field label="Focus">
-            <Input value={focus} onChange={setFocus} placeholder="Fast break spacing" />
-          </Field>
-        </div>
+      <Card title={editingId ? "Editing plan" : "Practice plan builder"}>
+        <PlanEditor value={draft} onChange={setDraft} coachLocked />
         <div className="mt-3 flex gap-2">
           <button
             onClick={() => save("Draft")}
@@ -419,41 +403,94 @@ function PlansTab({ coachName }: { coachName: string }) {
             Submit for approval
           </button>
         </div>
+        {editingId ? (
+          <button
+            onClick={() => {
+              setEditingId(null);
+              setDraft(emptyPlan(coachName, db.lists["Age categories"]?.[0] ?? "U-14"));
+            }}
+            className="mt-2 w-full rounded-md py-2 font-mono text-[10px] uppercase tracking-widest text-ink-400 ring-1 ring-ink-700"
+          >
+            Cancel editing
+          </button>
+        ) : null}
       </Card>
+
       <Card title="My plans">
         {mine.length === 0 ? (
           <div className="py-4 text-center font-mono text-[11px] text-ink-400">No plans yet.</div>
         ) : (
           <div className="divide-y divide-ink-800">
             {mine.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-2 py-2.5">
-                <div className="min-w-0">
-                  <div className="truncate text-sm text-ink-100">{p.title}</div>
-                  <div className="font-mono text-[10px] text-ink-400">
-                    {p.category} · {p.date}
+              <div key={p.id} className="py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm text-ink-100">{p.title}</div>
+                    <div className="font-mono text-[10px] text-ink-400">
+                      {p.category} · {p.date} · {p.blocks.length} sections
+                    </div>
                   </div>
+                  <Chip
+                    tone={
+                      p.status === "Approved"
+                        ? "good"
+                        : p.status === "Rejected"
+                          ? "bad"
+                          : p.status === "Submitted"
+                            ? "warn"
+                            : "neutral"
+                    }
+                  >
+                    {p.status.toUpperCase()}
+                  </Chip>
                 </div>
-                <Chip
-                  tone={
-                    p.status === "Approved"
-                      ? "good"
-                      : p.status === "Rejected"
-                        ? "bad"
-                        : p.status === "Submitted"
-                          ? "warn"
-                          : "neutral"
-                  }
-                >
-                  {p.status.toUpperCase()}
-                </Chip>
+                {p.review ? (
+                  <div className="mt-1 rounded bg-ink-850 px-2 py-1 font-mono text-[10px] text-ink-300">
+                    Director: {p.review}
+                  </div>
+                ) : null}
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => setViewing(viewing === p.id ? null : p.id)}
+                    className="rounded px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-court-400 ring-1 ring-ink-700"
+                  >
+                    {viewing === p.id ? "Hide" : "View"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const { id: _id, ...rest } = p;
+                      setDraft(rest);
+                      setEditingId(p.id);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="rounded px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-ink-300 ring-1 ring-ink-700"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!window.confirm("Delete this plan?")) return;
+                      update((d) => ({ ...d, plans: d.plans.filter((x) => x.id !== p.id) }));
+                    }}
+                    className="rounded px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-bad ring-1 ring-ink-700"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
+        {shown ? (
+          <div className="mt-3 rounded-md bg-ink-900 ring-1 ring-ink-700">
+            <PlanView plan={shown} />
+          </div>
+        ) : null}
       </Card>
     </>
   );
 }
+
 
 function Profile({ coachId }: { coachId: string }) {
   const { db, update } = useDB();

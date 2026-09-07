@@ -6,7 +6,6 @@ import {
   Chip,
   EmptyState,
   Field,
-  Input,
   Modal,
   Panel,
   Row,
@@ -15,10 +14,14 @@ import {
   Stat,
   Table,
   Td,
+  Textarea,
   Th,
 } from "@/components/kit";
+import { PlanEditor, PlanView, emptyPlan } from "@/components/plan-editor";
+import type { PlanDraft } from "@/components/plan-editor";
 import { useDB } from "@/lib/data-store";
 import type { Plan } from "@/lib/data-store";
+
 
 export const Route = createFileRoute("/technical")({
   head: () => ({
@@ -182,15 +185,12 @@ function GameApproval() {
 function PracticePlans() {
   const { db, update } = useDB();
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<Plan | null>(null);
+  const [review, setReview] = useState("");
   const [editing, setEditing] = useState<Plan | null>(null);
-  const [form, setForm] = useState<Omit<Plan, "id">>({
-    title: "",
-    category: "U-14",
-    coach: db.coaches[0]?.name ?? "",
-    focus: "",
-    date: new Date().toISOString().slice(0, 10),
-    status: "Draft",
-  });
+  const [form, setForm] = useState<PlanDraft>(
+    emptyPlan(db.coaches[0]?.name ?? "", db.lists["Age categories"]?.[0] ?? "U-14"),
+  );
 
   function submit() {
     if (!form.title.trim()) return;
@@ -202,9 +202,15 @@ function PracticePlans() {
     setOpen(false);
   }
 
-  function setStatus(id: string, status: Plan["status"]) {
-    update((d) => ({ ...d, plans: d.plans.map((p) => (p.id === id ? { ...p, status } : p)) }));
+  function setStatus(id: string, status: Plan["status"], note?: string) {
+    update((d) => ({
+      ...d,
+      plans: d.plans.map((p) =>
+        p.id === id ? { ...p, status, review: note === undefined ? p.review : note } : p,
+      ),
+    }));
   }
+
 
   return (
     <Panel
@@ -268,6 +274,16 @@ function PracticePlans() {
                 <div className="flex flex-wrap justify-end gap-1">
                   <button
                     type="button"
+                    onClick={() => {
+                      setViewing(p);
+                      setReview(p.review);
+                    }}
+                    className="rounded px-2 py-1 font-mono text-[10px] text-court-400 ring-1 ring-ink-700 hover:bg-court-500/10"
+                  >
+                    REVIEW
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setStatus(p.id, "Approved")}
                     className="rounded px-2 py-1 font-mono text-[10px] text-good ring-1 ring-ink-700 hover:bg-good/10"
                   >
@@ -302,45 +318,66 @@ function PracticePlans() {
       <Modal
         open={open}
         title={editing ? "Edit plan" : "New practice plan"}
+        meta="Build the session section by section, with a drill board for each"
         onClose={() => setOpen(false)}
         onSubmit={submit}
         submitLabel={editing ? "Save changes" : "Create plan"}
         wide
       >
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
-          <Field label="Title">
-            <Input value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
+        <div className="p-4">
+          <PlanEditor value={form} onChange={setForm} />
+          <div className="mt-3">
+            <Field label="Status">
+              <Select
+                value={form.status}
+                onChange={(v) => setForm({ ...form, status: v as Plan["status"] })}
+                options={["Draft", "Submitted", "Approved", "Rejected"]}
+              />
+            </Field>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={viewing !== null}
+        title="Plan review"
+        meta={viewing ? `${viewing.coach} · ${viewing.status}` : ""}
+        onClose={() => setViewing(null)}
+        onSubmit={() => {
+          if (viewing) setStatus(viewing.id, viewing.status, review);
+          setViewing(null);
+        }}
+        submitLabel="Save feedback"
+        wide
+      >
+        {viewing ? <PlanView plan={viewing} /> : null}
+        <div className="px-4 pb-4">
+          <Field label="Feedback to the coach">
+            <Textarea value={review} onChange={setReview} placeholder="What to adjust…" />
           </Field>
-          <Field label="Category">
-            <Select
-              value={form.category}
-              onChange={(v) => setForm({ ...form, category: v })}
-              options={db.lists["Age categories"] ?? ["U-14"]}
-            />
-          </Field>
-          <Field label="Coach">
-            <Select
-              value={form.coach}
-              onChange={(v) => setForm({ ...form, coach: v })}
-              options={db.coaches.map((c) => c.name)}
-            />
-          </Field>
-          <Field label="Focus">
-            <Input value={form.focus} onChange={(v) => setForm({ ...form, focus: v })} />
-          </Field>
-          <Field label="Date">
-            <Input type="date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
-          </Field>
-          <Field label="Status">
-            <Select
-              value={form.status}
-              onChange={(v) => setForm({ ...form, status: v as Plan["status"] })}
-              options={["Draft", "Submitted", "Approved", "Rejected"]}
-            />
-          </Field>
+          <div className="mt-3 flex gap-2">
+            <Button
+              onClick={() => {
+                if (viewing) setStatus(viewing.id, "Approved", review);
+                setViewing(null);
+              }}
+            >
+              Approve plan
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (viewing) setStatus(viewing.id, "Rejected", review);
+                setViewing(null);
+              }}
+            >
+              Reject plan
+            </Button>
+          </div>
         </div>
       </Modal>
     </Panel>
+
   );
 }
 
