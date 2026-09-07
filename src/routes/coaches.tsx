@@ -1,20 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   Button,
   Chip,
-  FieldGrid,
-  Filters,
+  EmptyState,
+  Field,
+  FilterSelect,
+  Input,
+  Modal,
   Panel,
   Row,
-  SearchField,
+  RowActions,
+  Search,
+  Select,
   Stat,
   Table,
   Td,
   Th,
+  Toggle,
   money,
 } from "@/components/kit";
-import { coaches } from "@/lib/mock-data";
+import { useDB } from "@/lib/data-store";
+import type { Coach } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/coaches")({
   head: () => ({
@@ -30,35 +38,144 @@ export const Route = createFileRoute("/coaches")({
         property: "og:description",
         content: "Manage coaches, their records, payments and portal access.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CoachesPage,
 });
 
+const blank: Omit<Coach, "id"> = {
+  name: "",
+  phone: "",
+  years: 0,
+  level: "ASSIST",
+  gender: "M",
+  wins: 0,
+  losses: 0,
+  sessions: 0,
+  sessionTarget: 30,
+  outstanding: 0,
+  branch: "",
+  portal: false,
+  rate: 25,
+  email: "",
+};
+
 function CoachesPage() {
+  const { db, update } = useDB();
+  const coaches = db.coaches;
+  const branches = db.branches.map((b) => b.name);
+
+  const [q, setQ] = useState("");
+  const [level, setLevel] = useState("");
+  const [branch, setBranch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Coach | null>(null);
+  const [form, setForm] = useState<Omit<Coach, "id">>(blank);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payMode, setPayMode] = useState("By rate");
+  const [payAmount, setPayAmount] = useState("0");
+
+  const filtered = coaches.filter((c) => {
+    const needle = q.trim().toLowerCase();
+    return (
+      (!needle || [c.name, c.phone, c.email].join(" ").toLowerCase().includes(needle)) &&
+      (!level || c.level === level) &&
+      (!branch || c.branch === branch)
+    );
+  });
+
   const outstanding = coaches.reduce((a, c) => a + c.outstanding, 0);
+  const portalCount = coaches.filter((c) => c.portal).length;
+  const sessionsDone = coaches.reduce((a, c) => a + c.sessions, 0);
+  const sessionsTarget = coaches.reduce((a, c) => a + c.sessionTarget, 0);
+  const detail = coaches.find((c) => c.id === selected) ?? coaches[0];
+
+  function openNew() {
+    setEditing(null);
+    setForm({ ...blank, branch: branches[0] ?? "" });
+    setOpen(true);
+  }
+  function openEdit(c: Coach) {
+    setEditing(c);
+    const { id: _id, ...rest } = c;
+    setForm(rest);
+    setOpen(true);
+  }
+  function submit() {
+    if (!form.name.trim()) return;
+    update((d) =>
+      editing
+        ? { ...d, coaches: d.coaches.map((c) => (c.id === editing.id ? { ...c, ...form } : c)) }
+        : { ...d, coaches: [{ ...form, id: `c-${Date.now().toString(36)}` }, ...d.coaches] },
+    );
+    setOpen(false);
+  }
+  function remove(c: Coach) {
+    if (!window.confirm(`Remove coach ${c.name}?`)) return;
+    update((d) => ({ ...d, coaches: d.coaches.filter((x) => x.id !== c.id) }));
+  }
+
+  function payCoach() {
+    if (!detail) return;
+    const amount =
+      payMode === "By rate" ? detail.rate * detail.sessions : Math.abs(Number(payAmount) || 0);
+    if (!amount) return;
+    update((d) => ({
+      ...d,
+      coaches: d.coaches.map((c) =>
+        c.id === detail.id ? { ...c, outstanding: Math.max(0, c.outstanding - amount) } : c,
+      ),
+      ledger: [
+        {
+          id: `l-${Date.now().toString(36)}`,
+          date: new Date().toISOString().slice(0, 10),
+          account: "Coach payroll",
+          entry: `${detail.name} · ${payMode.toLowerCase()}`,
+          type: "Expense" as const,
+          amount: -amount,
+          status: "Paid" as const,
+        },
+        ...d.ledger,
+      ],
+    }));
+    setPayOpen(false);
+  }
+
   return (
     <AppShell crumb="ROSTER / COACHES" title="Coaches">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Coaches" value={String(coaches.length)} note="4 head · 2 assistant" />
-        <Stat label="Portal enabled" value="3" note="Gmail or credentials" />
-        <Stat label="Sessions · May" value="130" note="of 170 planned" />
+        <Stat label="Coaches" value={String(coaches.length)} note="on staff" />
+        <Stat label="Portal enabled" value={String(portalCount)} note="Google or credentials" />
+        <Stat
+          label="Sessions delivered"
+          value={String(sessionsDone)}
+          note={`of ${sessionsTarget} planned`}
+        />
         <Stat label="Outstanding" value={money(outstanding)} accent note="payable to coaches" />
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_340px]">
         <Panel
           title="Coach database"
-          meta="Search by name or phone"
+          meta="Search by name, phone or email"
           action={
             <>
-              <Filters items={["Level", "Branch", "Portal"]} />
-              <Button>+ New coach</Button>
+              <FilterSelect
+                label="Level"
+                value={level}
+                onChange={setLevel}
+                options={["HEAD", "ASSIST", "SKILLS"]}
+              />
+              <FilterSelect label="Branch" value={branch} onChange={setBranch} options={branches} />
+              <Button onClick={openNew}>+ New coach</Button>
             </>
           }
         >
           <div className="border-b border-ink-800 px-4 py-3">
-            <SearchField placeholder="Search coaches by name or phone…" />
+            <Search value={q} onChange={setQ} placeholder="Search coaches by name or phone…" />
           </div>
           <Table
             head={
@@ -73,111 +190,239 @@ function CoachesPage() {
                 </Th>
               </>
             }
-            footer={`SHOWING ${coaches.length} OF 22`}
+            footer={`SHOWING ${filtered.length} OF ${coaches.length}`}
           >
-            {coaches.map((c) => (
-              <Row key={c.id}>
-                <Td strong>
-                  <div className="leading-tight">
-                    <div className="flex items-center gap-2">
-                      {c.name}
-                      {c.portal ? <Chip tone="accent">PORTAL</Chip> : null}
+            {filtered.length === 0 ? (
+              <EmptyState>No coaches match these filters.</EmptyState>
+            ) : (
+              filtered.map((c) => (
+                <Row key={c.id}>
+                  <Td strong>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(c.id)}
+                      className="block text-left leading-tight"
+                    >
+                      <div className="flex items-center gap-2">
+                        {c.name}
+                        {c.portal ? <Chip tone="accent">PORTAL</Chip> : null}
+                      </div>
+                      <div className="font-mono text-[10px] text-ink-400">
+                        {c.phone} · {c.years} yrs · {c.branch || "—"}
+                      </div>
+                    </button>
+                  </Td>
+                  <Td>
+                    <Chip>{c.level}</Chip>
+                  </Td>
+                  <Td hide>
+                    <span className="font-mono text-xs">${c.rate}/session</span>
+                  </Td>
+                  <Td hide>
+                    <span className="font-mono text-xs">
+                      {c.wins}–{c.losses}
+                    </span>
+                  </Td>
+                  <Td hide>
+                    <span className="font-mono text-xs text-ink-300">
+                      {c.sessions} / {c.sessionTarget}
+                    </span>
+                  </Td>
+                  <Td right>
+                    <div className="flex items-center justify-end gap-2">
+                      <span
+                        className={`font-mono text-xs ${
+                          c.outstanding ? "text-court-400" : "text-ink-400"
+                        }`}
+                      >
+                        {money(c.outstanding)}
+                      </span>
+                      <RowActions onEdit={() => openEdit(c)} onDelete={() => remove(c)} />
                     </div>
-                    <div className="font-mono text-[10px] text-ink-400">
-                      {c.phone} · {c.years} yrs · {c.branch}
-                    </div>
-                  </div>
-                </Td>
-                <Td>
-                  <Chip>{c.level}</Chip>
-                </Td>
-                <Td hide>
-                  <span className="font-mono text-xs">${c.rate}/session</span>
-                </Td>
-                <Td hide>
-                  <span className="font-mono text-xs">
-                    {c.wins}–{c.losses}
-                  </span>
-                </Td>
-                <Td hide>
-                  <span className="font-mono text-xs text-ink-300">
-                    {c.sessions} / {c.sessionTarget}
-                  </span>
-                </Td>
-                <Td right>
-                  <span
-                    className={`font-mono text-xs ${
-                      c.outstanding ? "text-court-400" : "text-ink-400"
-                    }`}
-                  >
-                    {money(c.outstanding)}
-                  </span>
-                </Td>
-              </Row>
-            ))}
+                  </Td>
+                </Row>
+              ))
+            )}
           </Table>
         </Panel>
 
-        <div className="space-y-4">
-          <Panel title="New coach" meta="Profile, documents, portal access">
-            <FieldGrid
-              fields={[
-                { label: "First name" },
-                { label: "Last name" },
-                { label: "Date of birth" },
-                { label: "Gender" },
-                { label: "Phone" },
-                { label: "Email" },
-                { label: "Level", hint: "Head / Assistant / Skills" },
-                { label: "Years of experience" },
-                { label: "Rate per session", hint: "$" },
-                { label: "Previous academies", hint: "add multiple" },
-                { label: "Upload CV", hint: "PDF" },
-                { label: "Upload ID front / back", hint: "image or PDF" },
-              ]}
-            />
-            <div className="flex items-center justify-between border-t border-ink-800 px-4 py-3">
-              <div>
-                <div className="text-sm text-ink-200">Coach portal account</div>
-                <div className="font-mono text-[10px] text-ink-400">
-                  Gmail sign-in or fixed username & password
-                </div>
+        {detail ? (
+          <Panel title={detail.name} meta="Performance & financials">
+            <div className="grid grid-cols-2 gap-2 p-4">
+              <MiniStat label="Record" value={`${detail.wins}–${detail.losses}`} />
+              <MiniStat label="Rate" value={`$${detail.rate}`} />
+              <MiniStat label="Sessions" value={`${detail.sessions}`} />
+              <MiniStat label="Outstanding" value={money(detail.outstanding)} accent />
+            </div>
+            <div className="space-y-2 border-t border-ink-800 px-4 py-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-ink-300">Email</span>
+                <span className="font-mono text-xs text-ink-100">{detail.email || "—"}</span>
               </div>
-              <Chip>OFF</Chip>
+              <div className="flex justify-between">
+                <span className="text-ink-300">Branch</span>
+                <span className="font-mono text-xs text-ink-100">{detail.branch || "—"}</span>
+              </div>
+            </div>
+            <div className="border-t border-ink-800 px-4 py-3">
+              <Toggle
+                on={detail.portal}
+                onChange={(v) =>
+                  update((d) => ({
+                    ...d,
+                    coaches: d.coaches.map((c) => (c.id === detail.id ? { ...c, portal: v } : c)),
+                  }))
+                }
+                label="Coach portal access"
+                note="Google sign-in or fixed credentials"
+              />
             </div>
             <div className="flex gap-2 border-t border-ink-800 px-4 py-3">
-              <Button>Save coach</Button>
-              <Button variant="ghost">Cancel</Button>
+              <Button
+                onClick={() => {
+                  setPayAmount(String(detail.outstanding || detail.rate));
+                  setPayOpen(true);
+                }}
+              >
+                Record payment
+              </Button>
+              <Button variant="ghost" onClick={() => openEdit(detail)}>
+                Edit
+              </Button>
             </div>
           </Panel>
-
-          <Panel title="Karim Haddad" meta="Performance & financials">
-            <div className="grid grid-cols-2 gap-2 p-4">
-              <MiniStat label="As head coach" value="11–3" />
-              <MiniStat label="As assistant" value="2–1" />
-              <MiniStat label="Sessions · May" value="26" />
-              <MiniStat label="Outstanding" value="$1,150" accent />
-            </div>
-            <div className="border-t border-ink-800 px-4 py-3">
-              <div className="label-mono mb-2">Record payment</div>
-              <div className="flex flex-wrap gap-2">
-                <Chip tone="accent">BY RATE</Chip>
-                <Chip>FIXED AMOUNT</Chip>
-                <Chip>CUSTOM SALARY</Chip>
-              </div>
-            </div>
-            <div className="border-t border-ink-800 px-4 py-3">
-              <div className="label-mono mb-2">Range</div>
-              <div className="flex flex-wrap gap-2">
-                <Chip>WEEKLY</Chip>
-                <Chip tone="accent">MONTHLY</Chip>
-                <Chip>YEARLY</Chip>
-                <Chip>DATE → DATE</Chip>
-              </div>
-            </div>
-          </Panel>
-        </div>
+        ) : null}
       </div>
+
+      <Modal
+        open={open}
+        title={editing ? `Edit ${editing.name}` : "New coach"}
+        meta="Profile, rate and portal access"
+        onClose={() => setOpen(false)}
+        onSubmit={submit}
+        submitLabel={editing ? "Save changes" : "Create coach"}
+        wide
+      >
+        <div className="grid gap-3 p-4 sm:grid-cols-2">
+          <Field label="Full name">
+            <Input value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+          </Field>
+          <Field label="Phone">
+            <Input value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+          </Field>
+          <Field label="Email">
+            <Input value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+          </Field>
+          <Field label="Level">
+            <Select
+              value={form.level}
+              onChange={(v) => setForm({ ...form, level: v as Coach["level"] })}
+              options={["HEAD", "ASSIST", "SKILLS"]}
+            />
+          </Field>
+          <Field label="Gender">
+            <Select
+              value={form.gender}
+              onChange={(v) => setForm({ ...form, gender: v as Coach["gender"] })}
+              options={["M", "F"]}
+            />
+          </Field>
+          <Field label="Branch">
+            <Select
+              value={form.branch}
+              onChange={(v) => setForm({ ...form, branch: v })}
+              options={["", ...branches]}
+            />
+          </Field>
+          <Field label="Years of experience">
+            <Input
+              type="number"
+              value={String(form.years)}
+              onChange={(v) => setForm({ ...form, years: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Rate per session" hint="USD">
+            <Input
+              type="number"
+              value={String(form.rate)}
+              onChange={(v) => setForm({ ...form, rate: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Sessions delivered">
+            <Input
+              type="number"
+              value={String(form.sessions)}
+              onChange={(v) => setForm({ ...form, sessions: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Session target">
+            <Input
+              type="number"
+              value={String(form.sessionTarget)}
+              onChange={(v) => setForm({ ...form, sessionTarget: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Wins">
+            <Input
+              type="number"
+              value={String(form.wins)}
+              onChange={(v) => setForm({ ...form, wins: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Losses">
+            <Input
+              type="number"
+              value={String(form.losses)}
+              onChange={(v) => setForm({ ...form, losses: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Outstanding">
+            <Input
+              type="number"
+              value={String(form.outstanding)}
+              onChange={(v) => setForm({ ...form, outstanding: Number(v) || 0 })}
+            />
+          </Field>
+          <div className="self-end">
+            <Toggle
+              on={form.portal}
+              onChange={(v) => setForm({ ...form, portal: v })}
+              label="Coach portal access"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={payOpen}
+        title="Record coach payment"
+        meta={detail?.name}
+        onClose={() => setPayOpen(false)}
+        onSubmit={payCoach}
+        submitLabel="Pay coach"
+      >
+        <div className="grid gap-3 p-4">
+          <Field label="Method">
+            <Select
+              value={payMode}
+              onChange={setPayMode}
+              options={["By rate", "Fixed amount", "Custom salary"]}
+            />
+          </Field>
+          {payMode === "By rate" ? (
+            <div className="rounded-md bg-ink-850 px-3 py-2 font-mono text-xs text-ink-200 ring-1 ring-ink-700">
+              {detail?.sessions} sessions × ${detail?.rate} ={" "}
+              <span className="text-court-400">
+                {money((detail?.sessions ?? 0) * (detail?.rate ?? 0))}
+              </span>
+            </div>
+          ) : (
+            <Field label="Amount" hint="USD">
+              <Input type="number" value={payAmount} onChange={setPayAmount} />
+            </Field>
+          )}
+        </div>
+      </Modal>
     </AppShell>
   );
 }
