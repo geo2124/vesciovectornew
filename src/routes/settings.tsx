@@ -488,6 +488,37 @@ function DataAdmin() {
         </div>
       </Panel>
 
+      <Panel title="Demo records" meta="Dev version only">
+        <div className="space-y-3 p-4">
+          <p className="text-sm text-ink-300">
+            Empty the workspace to start a clean academy, or bring the sample records back at any
+            time. Your academy details, dropdown options and colours are always kept.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (window.confirm("Delete every record in this workspace? Settings are kept."))
+                  clearData();
+              }}
+            >
+              Delete all data
+            </Button>
+            <Button
+              onClick={() => {
+                if (window.confirm("Load the sample records back into this workspace?")) loadDemo();
+              }}
+            >
+              Load demo data
+            </Button>
+          </div>
+          <div className="font-mono text-[10px] text-ink-400">
+            {db.players.length} players · {db.coaches.length} coaches · {db.sessions.length}{" "}
+            activities · {db.ledger.length} ledger rows
+          </div>
+        </div>
+      </Panel>
+
       <Panel title="Package features" meta="What this academy can reach">
         <div className="space-y-2 p-4">
           {[
