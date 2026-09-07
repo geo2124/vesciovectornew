@@ -187,6 +187,31 @@ export const emptyDB = (): DB => ({
   attendance: {},
 });
 
+/**
+ * Same workspace, but with every operational record removed. Settings,
+ * appearance, dropdown lists and the academy identity are kept so the system
+ * stays usable — this is what a brand new client starts from.
+ */
+export const blankDB = (): DB => {
+  const base = emptyDB();
+  return {
+    ...base,
+    coaches: [],
+    players: [],
+    teams: [],
+    staff: [],
+    branches: [],
+    sessions: [],
+    stock: [],
+    orders: [],
+    ledger: [],
+    users: [],
+    plans: [],
+    groups: [],
+    attendance: {},
+  };
+};
+
 const KEY = "vv-db";
 
 /** Keeps browsers that saved an older shape working after new fields ship. */
