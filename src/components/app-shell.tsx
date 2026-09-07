@@ -35,6 +35,13 @@ const groups: { title: string; items: NavItem[] }[] = [
       { to: "/coach", label: "Coach Portal", meta: "VIEW" },
     ],
   },
+  {
+    title: "Platform",
+    items: [
+      { to: "/admin", label: "Client Console", meta: "ADMIN" },
+      { to: "/setup", label: "Setup Wizard", meta: "TENANT" },
+    ],
+  },
 ];
 
 const mobileTabs: NavItem[] = [
