@@ -93,6 +93,15 @@ function TechnicalPage() {
   );
 }
 
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-ink-850 p-3 ring-1 ring-ink-700">
+      <div className="label-mono">{label}</div>
+      <div className="mt-1 text-sm text-ink-100">{value}</div>
+    </div>
+  );
+}
+
 function GameApproval() {
   const { db, update } = useDB();
   const games = db.sessions.filter((s) => s.kind === "Game");
@@ -223,14 +232,9 @@ function GameApproval() {
               <Detail label="Opponent / detail" value={game.detail} />
               <Detail label="Date & time" value={`${game.date} · ${game.time}`} />
               <Detail label="Branch" value={game.branch} />
-              <Detail label="Court" value={game.court} />
               <Detail label="Submitted by" value={game.coach} />
-              <Detail label="Team" value={game.team} />
               <Detail label="Status" value={game.status} />
-              <Detail
-                label="Result"
-                value={game.result && game.result.trim() ? game.result : "Not played yet"}
-              />
+              <Detail label="Type" value={game.kind} />
             </div>
             <div>
               <div className="label-mono">Squad checked in</div>
