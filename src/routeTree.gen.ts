@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountingRouteImport } from './routes/accounting'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BranchesRouteImport } from './routes/branches'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CoachRouteImport } from './routes/coach'
@@ -20,6 +21,7 @@ import { Route as PersonnelRouteImport } from './routes/personnel'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as SessionsRouteImport } from './routes/sessions'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as TechnicalRouteImport } from './routes/technical'
 import { Route as UsersRouteImport } from './routes/users'
@@ -32,6 +34,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountingRoute = AccountingRouteImport.update({
   id: '/accounting',
   path: '/accounting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BranchesRoute = BranchesRouteImport.update({
@@ -79,6 +86,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsRoute = TeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
@@ -98,6 +110,7 @@ const UsersRoute = UsersRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounting': typeof AccountingRoute
+  '/admin': typeof AdminRoute
   '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
   '/coach': typeof CoachRoute
@@ -107,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/players': typeof PlayersRoute
   '/sessions': typeof SessionsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/teams': typeof TeamsRoute
   '/technical': typeof TechnicalRoute
   '/users': typeof UsersRoute
@@ -114,6 +128,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounting': typeof AccountingRoute
+  '/admin': typeof AdminRoute
   '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
   '/coach': typeof CoachRoute
@@ -123,6 +138,7 @@ export interface FileRoutesByTo {
   '/players': typeof PlayersRoute
   '/sessions': typeof SessionsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/teams': typeof TeamsRoute
   '/technical': typeof TechnicalRoute
   '/users': typeof UsersRoute
@@ -131,6 +147,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accounting': typeof AccountingRoute
+  '/admin': typeof AdminRoute
   '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
   '/coach': typeof CoachRoute
@@ -140,6 +157,7 @@ export interface FileRoutesById {
   '/players': typeof PlayersRoute
   '/sessions': typeof SessionsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/teams': typeof TeamsRoute
   '/technical': typeof TechnicalRoute
   '/users': typeof UsersRoute
@@ -149,6 +167,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accounting'
+    | '/admin'
     | '/branches'
     | '/calendar'
     | '/coach'
@@ -158,6 +177,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sessions'
     | '/settings'
+    | '/setup'
     | '/teams'
     | '/technical'
     | '/users'
@@ -165,6 +185,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accounting'
+    | '/admin'
     | '/branches'
     | '/calendar'
     | '/coach'
@@ -174,6 +195,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sessions'
     | '/settings'
+    | '/setup'
     | '/teams'
     | '/technical'
     | '/users'
@@ -181,6 +203,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/accounting'
+    | '/admin'
     | '/branches'
     | '/calendar'
     | '/coach'
@@ -190,6 +213,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/sessions'
     | '/settings'
+    | '/setup'
     | '/teams'
     | '/technical'
     | '/users'
@@ -198,6 +222,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountingRoute: typeof AccountingRoute
+  AdminRoute: typeof AdminRoute
   BranchesRoute: typeof BranchesRoute
   CalendarRoute: typeof CalendarRoute
   CoachRoute: typeof CoachRoute
@@ -207,6 +232,7 @@ export interface RootRouteChildren {
   PlayersRoute: typeof PlayersRoute
   SessionsRoute: typeof SessionsRoute
   SettingsRoute: typeof SettingsRoute
+  SetupRoute: typeof SetupRoute
   TeamsRoute: typeof TeamsRoute
   TechnicalRoute: typeof TechnicalRoute
   UsersRoute: typeof UsersRoute
@@ -226,6 +252,13 @@ declare module '@tanstack/react-router' {
       path: '/accounting'
       fullPath: '/accounting'
       preLoaderRoute: typeof AccountingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/branches': {
@@ -291,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teams': {
       id: '/teams'
       path: '/teams'
@@ -318,6 +358,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountingRoute: AccountingRoute,
+  AdminRoute: AdminRoute,
   BranchesRoute: BranchesRoute,
   CalendarRoute: CalendarRoute,
   CoachRoute: CoachRoute,
@@ -327,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayersRoute: PlayersRoute,
   SessionsRoute: SessionsRoute,
   SettingsRoute: SettingsRoute,
+  SetupRoute: SetupRoute,
   TeamsRoute: TeamsRoute,
   TechnicalRoute: TechnicalRoute,
   UsersRoute: UsersRoute,

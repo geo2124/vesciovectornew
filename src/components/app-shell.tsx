@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { academy } from "@/lib/mock-data";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
+import { ThemeToggle } from "@/lib/theme";
 
 type NavItem = { to: string; label: string; meta?: string };
 
@@ -33,6 +34,13 @@ const groups: { title: string; items: NavItem[] }[] = [
       { to: "/settings", label: "System Settings" },
       { to: "/technical", label: "Technical Portal", meta: "VIEW" },
       { to: "/coach", label: "Coach Portal", meta: "VIEW" },
+    ],
+  },
+  {
+    title: "Platform",
+    items: [
+      { to: "/admin", label: "Client Console", meta: "ADMIN" },
+      { to: "/setup", label: "Setup Wizard", meta: "TENANT" },
     ],
   },
 ];
@@ -165,6 +173,7 @@ export function AppShell({
               <span className="h-1.5 w-1.5 animate-pulse bg-court-500" />
               DEV VERSION
             </div>
+            <ThemeToggle />
             <div className="grid h-9 w-9 place-items-center bg-ink-800 ring-1 ring-ink-700">
               <span className="font-mono text-xs text-ink-200">GM</span>
             </div>

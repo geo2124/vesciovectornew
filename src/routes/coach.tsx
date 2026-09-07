@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Chip } from "@/components/kit";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
+import { ThemeToggle } from "@/lib/theme";
 import { players, sessions } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/coach")({
@@ -42,12 +43,12 @@ function CoachPortal() {
             <div className="font-display text-sm tracking-tight text-ink-100">Coach Portal</div>
             <div className="font-mono text-[9px] tracking-[0.25em] text-court-400">/COACH</div>
           </div>
-          <Link
-            to="/"
-            className="ml-auto font-mono text-[10px] uppercase tracking-widest text-ink-400"
-          >
-            Exit
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle compact />
+            <Link to="/" className="font-mono text-[10px] uppercase tracking-widest text-ink-400">
+              Exit
+            </Link>
+          </div>
         </header>
 
         <div className="bg-ink-900 px-4 py-4">
