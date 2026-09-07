@@ -72,7 +72,13 @@ export type Academy = {
   sport: "Basketball" | "Football" | "Volleyball";
   currency: string;
   logo: string | null;
+  supportPhone: string;
+  supportEmail: string;
+  softDeadline: number;
+  hardDeadline: number;
 };
+
+export type WhatsAppGroup = { id: string; name: string; scope: string };
 
 export type DB = {
   academy: Academy;
@@ -87,6 +93,9 @@ export type DB = {
   ledger: LedgerEntry[];
   users: UserAccount[];
   plans: Plan[];
+  /** editable dropdown option lists used across the system */
+  lists: Record<string, string[]>;
+  groups: WhatsAppGroup[];
   /** sessionId -> player ids marked present */
   attendance: Record<string, string[]>;
 };
@@ -118,6 +127,10 @@ export const emptyDB = (): DB => ({
     sport: "Basketball",
     currency: "USD",
     logo: null,
+    supportPhone: "+961 3 000 000",
+    supportEmail: "help@vesciovector.com",
+    softDeadline: 7,
+    hardDeadline: 30,
   },
   coaches: seedCoaches,
   players: seedPlayers,
@@ -130,6 +143,18 @@ export const emptyDB = (): DB => ({
   ledger: seedLedger as LedgerEntry[],
   users: seedUsers,
   plans: seedPlans,
+  lists: {
+    "Age categories": ["U-10", "U-12", "U-14", "U-16", "U-18", "Senior"],
+    "Staff positions": ["General Manager", "Technical Director", "Branch Manager", "Accountant"],
+    "Coach levels": ["HEAD", "ASSIST", "SKILLS"],
+    "Session types": ["Practice", "Game", "Seminar", "Camp"],
+    "Expense accounts": ["Coach payroll", "Court rental", "Merchandise", "Utilities"],
+  },
+  groups: [
+    { id: "g1", name: "Game results · U-14", scope: "U-14 North, U-14 South" },
+    { id: "g2", name: "Achrafieh parents", scope: "All Achrafieh teams" },
+    { id: "g3", name: "Coaches announcements", scope: "All coaches" },
+  ],
   attendance: {},
 });
 
