@@ -4,17 +4,23 @@ import { AppShell } from "@/components/app-shell";
 import {
   Button,
   Chip,
-  FieldGrid,
-  Filters,
+  EmptyState,
+  Field,
+  FilterSelect,
+  Input,
+  Modal,
   Panel,
   Row,
-  SearchField,
+  RowActions,
+  Search,
+  Select,
   Stat,
   Table,
   Td,
   Th,
 } from "@/components/kit";
-import { players, sessions } from "@/lib/mock-data";
+import { useDB } from "@/lib/data-store";
+import type { SessionItem } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/sessions")({
   head: () => ({
@@ -23,232 +29,309 @@ export const Route = createFileRoute("/sessions")({
       {
         name: "description",
         content:
-          "Practices and games: scheduling, recurrence, coach assignment, approval workflow and attendance.",
+          "Practices, games, camps and seminars with attendance tracking, approvals and coach assignment.",
       },
       { property: "og:title", content: "Sessions — Vescio Vector" },
       {
         property: "og:description",
-        content: "Schedule practices and games and run attendance.",
+        content: "Plan sessions, approve games and take attendance in one place.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SessionsPage,
 });
 
-const tabs = ["Practices", "Games", "Attendance"] as const;
+export const statuses: SessionItem["status"][] = [
+  "Planned",
+  "Pending approval",
+  "Pre-approved",
+  "Official",
+  "Live",
+  "Completed",
+];
+
+const statusTone: Record<SessionItem["status"], "accent" | "good" | "warn" | "neutral"> = {
+  Live: "accent",
+  Planned: "neutral",
+  "Pending approval": "warn",
+  "Pre-approved": "good",
+  Official: "accent",
+  Completed: "good",
+};
+
+const blank: Omit<SessionItem, "id"> = {
+  kind: "Practice",
+  title: "",
+  detail: "",
+  date: new Date().toISOString().slice(0, 10),
+  time: "17:00",
+  branch: "",
+  coach: "",
+  status: "Planned",
+};
 
 function SessionsPage() {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("Practices");
+  const { db, update } = useDB();
+  const sessions = db.sessions;
+  const branches = db.branches.map((b) => b.name);
+  const coachNames = db.coaches.map((c) => c.name);
+
+  const [q, setQ] = useState("");
+  const [kind, setKind] = useState("");
+  const [branch, setBranch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<SessionItem | null>(null);
+  const [form, setForm] = useState<Omit<SessionItem, "id">>(blank);
+  const [attendFor, setAttendFor] = useState<SessionItem | null>(null);
+
+  const filtered = sessions.filter(
+    (s) =>
+      (!q.trim() ||
+        [s.title, s.detail, s.coach].join(" ").toLowerCase().includes(q.toLowerCase())) &&
+      (!kind || s.kind === kind) &&
+      (!branch || s.branch === branch),
+  );
+
+  const pending = sessions.filter((s) => s.status === "Pending approval").length;
+  const games = sessions.filter((s) => s.kind === "Game").length;
+
+  function openNew() {
+    setEditing(null);
+    setForm({ ...blank, branch: branches[0] ?? "", coach: coachNames[0] ?? "" });
+    setOpen(true);
+  }
+  function openEdit(s: SessionItem) {
+    setEditing(s);
+    const { id: _id, ...rest } = s;
+    setForm(rest);
+    setOpen(true);
+  }
+  function submit() {
+    if (!form.title.trim()) return;
+    update((d) =>
+      editing
+        ? { ...d, sessions: d.sessions.map((s) => (s.id === editing.id ? { ...s, ...form } : s)) }
+        : { ...d, sessions: [{ ...form, id: `e-${Date.now().toString(36)}` }, ...d.sessions] },
+    );
+    setOpen(false);
+  }
+  function remove(s: SessionItem) {
+    if (!window.confirm(`Delete "${s.title}"?`)) return;
+    update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== s.id) }));
+  }
+  function setStatus(s: SessionItem, status: SessionItem["status"]) {
+    update((d) => ({
+      ...d,
+      sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, status } : x)),
+    }));
+  }
+
+  const present = attendFor ? (db.attendance[attendFor.id] ?? []) : [];
+  const roster = attendFor
+    ? db.players.filter((p) => !attendFor.branch || p.branch === attendFor.branch)
+    : [];
+
+  function togglePresent(playerId: string) {
+    if (!attendFor) return;
+    update((d) => {
+      const cur = d.attendance[attendFor.id] ?? [];
+      const next = cur.includes(playerId)
+        ? cur.filter((x) => x !== playerId)
+        : [...cur, playerId];
+      return { ...d, attendance: { ...d.attendance, [attendFor.id]: next } };
+    });
+  }
 
   return (
     <AppShell crumb="OPS / SESSIONS" title="Sessions">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="This week" value="42" note="practices" />
-        <Stat label="Games" value="9" note="2 awaiting approval" accent />
-        <Stat label="Live now" value="3" note="attendance open" accent />
-        <Stat label="Cancelled" value="1" note="court unavailable" />
+        <Stat label="Scheduled" value={String(sessions.length)} note="all upcoming activity" accent />
+        <Stat label="Games" value={String(games)} />
+        <Stat label="Awaiting approval" value={String(pending)} note="technical direction" />
+        <Stat
+          label="Attendance marked"
+          value={String(Object.values(db.attendance).reduce((a, v) => a + v.length, 0))}
+          note="player check-ins"
+          accent
+        />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-md bg-ink-850 p-0.5 ring-1 ring-ink-700">
-          {tabs.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors ${
-                tab === t ? "bg-court-500 text-ink-950" : "text-ink-300"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-        <Filters items={["Branch", "Team", "Coach"]} />
-        <div className="ml-auto">
-          <Button>+ New {tab === "Games" ? "game" : "practice"}</Button>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
-        {tab === "Attendance" ? <AttendanceBoard /> : <SessionList kind={tab} />}
-
-        <div className="space-y-4">
-          {tab === "Games" ? (
-            <Panel title="Schedule a game" meta="Goes to technical director for approval">
-              <FieldGrid
-                fields={[
-                  { label: "Academy team", hint: "autocomplete" },
-                  { label: "Opponent", hint: "academy or external" },
-                  { label: "Location" },
-                  { label: "Date" },
-                  { label: "Time" },
-                  { label: "Game type", hint: "friendly / official" },
-                  { label: "Referees", hint: "optional" },
-                  { label: "Staff assigned", hint: "optional" },
-                ]}
-              />
-              <div className="flex gap-2 border-t border-ink-800 px-4 py-3">
-                <Button>Submit for approval</Button>
-              </div>
-            </Panel>
-          ) : (
-            <Panel title="Create a practice">
-              <FieldGrid
-                fields={[
-                  { label: "Primary branch" },
-                  { label: "Additional branches", hint: "optional" },
-                  { label: "Courts", hint: "one or more" },
-                  { label: "Head coach" },
-                  { label: "Assistant coach", hint: "optional" },
-                  { label: "Date" },
-                  { label: "Start time" },
-                  { label: "End time" },
-                ]}
-              />
-              <div className="border-t border-ink-800 px-4 py-3">
-                <div className="label-mono mb-2">Recurrence</div>
-                <div className="flex flex-wrap gap-2">
-                  <Chip tone="accent">ONCE</Chip>
-                  <Chip>WEEKLY</Chip>
-                  <Chip>BI-WEEKLY</Chip>
-                  <Chip>MONTHLY</Chip>
-                </div>
-              </div>
-              <div className="flex gap-2 border-t border-ink-800 px-4 py-3">
-                <Button>Create session</Button>
-                <Button variant="ghost">Cancel</Button>
-              </div>
-            </Panel>
-          )}
-
-          <Panel title="Approval pipeline">
-            <div className="space-y-2 p-4 text-sm">
-              <PipeRow label="Submitted by coach" value="4" />
-              <PipeRow label="Pending technical director" value="2" tone="warn" />
-              <PipeRow label="Pre-approved" value="1" tone="accent" />
-              <PipeRow label="Official" value="6" tone="good" />
-            </div>
-          </Panel>
-        </div>
-      </div>
-    </AppShell>
-  );
-}
-
-function SessionList({ kind }: { kind: "Practices" | "Games" }) {
-  const list = sessions.filter((s) => (kind === "Games" ? s.kind === "Game" : s.kind !== "Game"));
-  return (
-    <Panel title={kind} meta="Editable by branch managers at any time">
-      <div className="border-b border-ink-800 px-4 py-3">
-        <SearchField placeholder="Search sessions…" />
-      </div>
-      <Table
-        head={
+      <Panel
+        className="mt-4"
+        title="Activity list"
+        meta="Practices, games, camps and seminars"
+        action={
           <>
-            <Th>ACTIVITY</Th>
-            <Th>DATE</Th>
-            <Th hide>BRANCH</Th>
-            <Th hide>COACH</Th>
-            <Th>
-              <span className="block text-right">STATUS</span>
-            </Th>
+            <FilterSelect
+              label="Type"
+              value={kind}
+              onChange={setKind}
+              options={["Practice", "Game", "Seminar", "Camp"]}
+            />
+            <FilterSelect label="Branch" value={branch} onChange={setBranch} options={branches} />
+            <Button onClick={openNew}>+ New session</Button>
           </>
         }
-        footer={`SHOWING ${list.length} OF ${kind === "Games" ? 9 : 42}`}
       >
-        {list.map((s) => (
-          <Row key={s.id}>
-            <Td strong>
-              <div className="leading-tight">
-                <div>{s.title}</div>
-                <div className="font-mono text-[10px] text-ink-400">{s.detail}</div>
-              </div>
-            </Td>
-            <Td>
-              <span className="font-mono text-xs">
-                {s.date.slice(5)} · {s.time}
-              </span>
-            </Td>
-            <Td hide>{s.branch}</Td>
-            <Td hide>{s.coach}</Td>
-            <Td right>
-              <Chip
-                tone={
-                  s.status === "Live"
-                    ? "accent"
-                    : s.status === "Pending approval"
-                      ? "warn"
-                      : s.status === "Official"
-                        ? "good"
-                        : "neutral"
-                }
-              >
-                {s.status.toUpperCase()}
-              </Chip>
-            </Td>
-          </Row>
-        ))}
-      </Table>
-    </Panel>
-  );
-}
+        <div className="border-b border-ink-800 px-4 py-3">
+          <Search value={q} onChange={setQ} placeholder="Search sessions, coaches…" />
+        </div>
+        <Table
+          head={
+            <>
+              <Th>ACTIVITY</Th>
+              <Th>TYPE</Th>
+              <Th hide>WHEN</Th>
+              <Th hide>COACH</Th>
+              <Th>
+                <span className="block text-right">STATUS</span>
+              </Th>
+            </>
+          }
+          footer={`SHOWING ${filtered.length} OF ${sessions.length}`}
+        >
+          {filtered.length === 0 ? (
+            <EmptyState>No sessions match these filters.</EmptyState>
+          ) : (
+            filtered.map((s) => (
+              <Row key={s.id}>
+                <Td strong>
+                  <div className="leading-tight">
+                    <div>{s.title}</div>
+                    <div className="font-mono text-[10px] text-ink-400">
+                      {s.detail || "—"} · {s.branch || "—"}
+                    </div>
+                  </div>
+                </Td>
+                <Td>
+                  <Chip>{s.kind.toUpperCase()}</Chip>
+                </Td>
+                <Td hide>
+                  <span className="font-mono text-xs">
+                    {s.date} · {s.time}
+                  </span>
+                </Td>
+                <Td hide>{s.coach || "—"}</Td>
+                <Td right>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Chip tone={statusTone[s.status]}>{s.status.toUpperCase()}</Chip>
+                    {s.status === "Pending approval" ? (
+                      <button
+                        type="button"
+                        onClick={() => setStatus(s, "Pre-approved")}
+                        className="rounded px-2 py-1 font-mono text-[10px] text-good ring-1 ring-ink-700 hover:bg-good/10"
+                      >
+                        APPROVE
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setAttendFor(s)}
+                      className="rounded px-2 py-1 font-mono text-[10px] text-court-400 ring-1 ring-ink-700 hover:bg-court-500/10"
+                    >
+                      ATTENDANCE
+                    </button>
+                    <RowActions onEdit={() => openEdit(s)} onDelete={() => remove(s)} />
+                  </div>
+                </Td>
+              </Row>
+            ))
+          )}
+        </Table>
+      </Panel>
 
-function AttendanceBoard() {
-  return (
-    <Panel
-      title="U-16 North · Practice"
-      meta="Court A · 14:00 · attendance opened 1h before"
-      action={<Button>Save attendance</Button>}
-    >
-      <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
-        <div className="text-sm text-ink-200">Coach check-in</div>
-        <Chip tone="good">KARIM HADDAD · CHECKED IN</Chip>
-      </div>
-      <div className="divide-y divide-ink-800">
-        {players.map((p) => (
-          <div key={p.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-ink-100">{p.name}</div>
-              <div className="font-mono text-[10px] text-ink-400">
-                {p.category} · {p.team}
-              </div>
+      <Modal
+        open={open}
+        title={editing ? "Edit session" : "New session"}
+        meta="Type, schedule, branch and coach"
+        onClose={() => setOpen(false)}
+        onSubmit={submit}
+        submitLabel={editing ? "Save changes" : "Create session"}
+        wide
+      >
+        <div className="grid gap-3 p-4 sm:grid-cols-2">
+          <Field label="Title">
+            <Input value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
+          </Field>
+          <Field label="Type">
+            <Select
+              value={form.kind}
+              onChange={(v) => setForm({ ...form, kind: v as SessionItem["kind"] })}
+              options={["Practice", "Game", "Seminar", "Camp"]}
+            />
+          </Field>
+          <Field label="Date">
+            <Input type="date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
+          </Field>
+          <Field label="Time">
+            <Input type="time" value={form.time} onChange={(v) => setForm({ ...form, time: v })} />
+          </Field>
+          <Field label="Branch">
+            <Select
+              value={form.branch}
+              onChange={(v) => setForm({ ...form, branch: v })}
+              options={["", ...branches, "HQ"]}
+            />
+          </Field>
+          <Field label="Coach">
+            <Select
+              value={form.coach}
+              onChange={(v) => setForm({ ...form, coach: v })}
+              options={["", ...coachNames]}
+            />
+          </Field>
+          <Field label="Detail" hint="court, opponent, notes">
+            <Input value={form.detail} onChange={(v) => setForm({ ...form, detail: v })} />
+          </Field>
+          <Field label="Status">
+            <Select
+              value={form.status}
+              onChange={(v) => setForm({ ...form, status: v as SessionItem["status"] })}
+              options={statuses}
+            />
+          </Field>
+        </div>
+      </Modal>
+
+      <Modal
+        open={attendFor !== null}
+        title={attendFor ? `Attendance · ${attendFor.title}` : ""}
+        meta={attendFor ? `${present.length} present of ${roster.length}` : ""}
+        onClose={() => setAttendFor(null)}
+        wide
+      >
+        <div className="max-h-[60vh] space-y-1 overflow-y-auto p-4">
+          {roster.length === 0 ? (
+            <div className="py-8 text-center font-mono text-[11px] text-ink-400">
+              No players registered for this branch yet.
             </div>
-            {p.status === "Soft flag" ? <Chip tone="warn">PAYMENT DUE</Chip> : null}
-            {p.status === "Inactive" ? <Chip tone="bad">BLOCKED · OVERRIDE</Chip> : null}
-            <div className="flex gap-1.5">
-              {["P", "A", "E"].map((m, i) => (
-                <span
-                  key={m}
-                  className={`grid h-8 w-8 place-items-center rounded font-mono text-xs ring-1 ${
-                    i === 0 && p.status !== "Inactive"
-                      ? "bg-court-500 text-ink-950 ring-court-500"
-                      : "bg-ink-850 text-ink-300 ring-ink-700"
+          ) : (
+            roster.map((p) => {
+              const on = present.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => togglePresent(p.id)}
+                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left ring-1 transition-colors ${
+                    on ? "bg-good/10 ring-good/40" : "bg-ink-850 ring-ink-700"
                   }`}
                 >
-                  {m}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </Panel>
-  );
-}
-
-function PipeRow({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  tone?: "neutral" | "accent" | "good" | "warn";
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-ink-300">{label}</span>
-      <Chip tone={tone}>{value}</Chip>
-    </div>
+                  <span className="flex-1">
+                    <span className="block text-sm text-ink-100">{p.name}</span>
+                    <span className="block font-mono text-[10px] text-ink-400">
+                      {p.category} · {p.team || "no team"}
+                    </span>
+                  </span>
+                  <Chip tone={on ? "good" : "neutral"}>{on ? "PRESENT" : "ABSENT"}</Chip>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </Modal>
+    </AppShell>
   );
 }

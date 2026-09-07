@@ -1,19 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   Button,
   Chip,
-  Filters,
+  EmptyState,
+  Field,
+  FilterSelect,
+  Input,
+  Modal,
   Panel,
   Row,
-  SearchField,
+  RowActions,
+  Search,
+  Select,
   Stat,
   Table,
   Td,
   Th,
   money,
 } from "@/components/kit";
-import { ledger } from "@/lib/mock-data";
+import { useDB } from "@/lib/data-store";
+import type { LedgerEntry } from "@/lib/data-store";
 
 export const Route = createFileRoute("/accounting")({
   head: () => ({
@@ -22,117 +30,242 @@ export const Route = createFileRoute("/accounting")({
       {
         name: "description",
         content:
-          "Academy financials: collections, expenses, payroll, branch and team reports, and outstanding balances.",
+          "Academy ledger: fee collections, coach payroll, court rental, merchandise costs and outstanding balances.",
       },
       { property: "og:title", content: "Accounting — Vescio Vector" },
-      { property: "og:description", content: "Track revenue, expenses and reports per branch." },
+      {
+        property: "og:description",
+        content: "Revenue, expenses and collections for the whole academy.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AccountingPage,
 });
 
+const accounts = [
+  "Monthly fees",
+  "Coach payroll",
+  "Merchandise",
+  "Court rental",
+  "Camp income",
+  "Utilities",
+  "Other",
+];
+
+const blank: Omit<LedgerEntry, "id"> = {
+  date: new Date().toISOString().slice(0, 10),
+  account: "Monthly fees",
+  entry: "",
+  type: "Revenue",
+  amount: 0,
+  status: "Collected",
+};
+
 function AccountingPage() {
+  const { db, update } = useDB();
+  const ledger = db.ledger;
+
+  const [q, setQ] = useState("");
+  const [type, setType] = useState("");
+  const [account, setAccount] = useState("");
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<LedgerEntry | null>(null);
+  const [form, setForm] = useState<Omit<LedgerEntry, "id">>(blank);
+
+  const filtered = ledger.filter(
+    (l) =>
+      (!q.trim() || [l.entry, l.account].join(" ").toLowerCase().includes(q.toLowerCase())) &&
+      (!type || l.type === type) &&
+      (!account || l.account === account),
+  );
+
+  const revenue = ledger.filter((l) => l.amount > 0).reduce((a, l) => a + l.amount, 0);
+  const expense = ledger.filter((l) => l.amount < 0).reduce((a, l) => a + Math.abs(l.amount), 0);
+  const outstandingPlayers = db.players.reduce((a, p) => a + p.balance, 0);
+  const outstandingCoaches = db.coaches.reduce((a, c) => a + c.outstanding, 0);
+
+  function submit() {
+    if (!form.entry.trim()) return;
+    const signed = form.type === "Expense" ? -Math.abs(form.amount) : Math.abs(form.amount);
+    const payload = { ...form, amount: signed };
+    update((d) =>
+      editing
+        ? { ...d, ledger: d.ledger.map((l) => (l.id === editing.id ? { ...l, ...payload } : l)) }
+        : { ...d, ledger: [{ ...payload, id: `l-${Date.now().toString(36)}` }, ...d.ledger] },
+    );
+    setOpen(false);
+  }
+
+  function exportCsv() {
+    const rows = [
+      ["Date", "Account", "Entry", "Type", "Amount", "Status"],
+      ...filtered.map((l) => [l.date, l.account, l.entry, l.type, String(l.amount), l.status]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vescio-vector-ledger.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <AppShell crumb="CONTROL / ACCOUNTING" title="Accounting">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Collected · May" value="$64.2k" note="91% of target" accent />
-        <Stat label="Expenses · May" value="$31.4k" note="payroll 58%" />
-        <Stat label="Net" value="$32.8k" note="▲ 8% vs April" accent />
-        <Stat label="Outstanding" value="$6.4k" note="19 flagged players" />
+        <Stat label="Revenue" value={money(revenue)} note="all recorded income" accent />
+        <Stat label="Expenses" value={money(expense)} note="payroll, stock, rental" />
+        <Stat label="Net" value={money(revenue - expense)} accent />
+        <Stat
+          label="Outstanding"
+          value={money(outstandingPlayers + outstandingCoaches)}
+          note={`${money(outstandingPlayers)} in · ${money(outstandingCoaches)} out`}
+        />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <SearchField placeholder="Search entries, players or suppliers…" />
-        <Filters items={["Branch", "Team", "Type", "Date range"]} />
-        <div className="ml-auto flex gap-2">
-          <Button variant="ghost">Export</Button>
-          <Button>+ New entry</Button>
+      <Panel
+        className="mt-4"
+        title="Ledger"
+        meta="Every revenue and expense line"
+        action={
+          <>
+            <FilterSelect
+              label="Type"
+              value={type}
+              onChange={setType}
+              options={["Revenue", "Expense"]}
+            />
+            <FilterSelect
+              label="Account"
+              value={account}
+              onChange={setAccount}
+              options={accounts}
+            />
+            <Button variant="ghost" onClick={exportCsv}>
+              Export CSV
+            </Button>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setForm(blank);
+                setOpen(true);
+              }}
+            >
+              + New entry
+            </Button>
+          </>
+        }
+      >
+        <div className="border-b border-ink-800 px-4 py-3">
+          <Search value={q} onChange={setQ} placeholder="Search ledger entries…" />
         </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
-        <Panel title="Ledger" meta="Revenue, expenses and validations">
-          <Table
-            head={
-              <>
-                <Th>DATE</Th>
-                <Th>ENTRY</Th>
-                <Th hide>ACCOUNT</Th>
-                <Th>AMOUNT</Th>
-                <Th>
-                  <span className="block text-right">STATUS</span>
-                </Th>
-              </>
-            }
-            footer={`SHOWING ${ledger.length} OF 184`}
-          >
-            {ledger.map((l) => (
+        <Table
+          head={
+            <>
+              <Th>DATE</Th>
+              <Th>ENTRY</Th>
+              <Th hide>ACCOUNT</Th>
+              <Th hide>STATUS</Th>
+              <Th>
+                <span className="block text-right">AMOUNT</span>
+              </Th>
+            </>
+          }
+          footer={`SHOWING ${filtered.length} OF ${ledger.length}`}
+        >
+          {filtered.length === 0 ? (
+            <EmptyState>No ledger entries match these filters.</EmptyState>
+          ) : (
+            filtered.map((l) => (
               <Row key={l.id}>
                 <Td>
-                  <span className="font-mono text-xs">{l.date.slice(5)}</span>
+                  <span className="font-mono text-xs text-ink-300">{l.date}</span>
                 </Td>
                 <Td strong>{l.entry}</Td>
-                <Td hide>{l.account}</Td>
-                <Td>
-                  <span
-                    className={`font-mono text-xs ${
-                      l.amount > 0 ? "text-good" : "text-court-400"
-                    }`}
-                  >
-                    {money(l.amount)}
-                  </span>
+                <Td hide>
+                  <Chip>{l.account}</Chip>
                 </Td>
-                <Td right>
+                <Td hide>
                   <Chip tone={l.status === "Pending" ? "warn" : "good"}>
                     {l.status.toUpperCase()}
                   </Chip>
                 </Td>
+                <Td right>
+                  <div className="flex items-center justify-end gap-2">
+                    <span
+                      className={`font-mono text-xs ${
+                        l.amount < 0 ? "text-bad" : "text-court-400"
+                      }`}
+                    >
+                      {money(l.amount)}
+                    </span>
+                    <RowActions
+                      onEdit={() => {
+                        setEditing(l);
+                        const { id: _id, ...rest } = l;
+                        setForm({ ...rest, amount: Math.abs(rest.amount) });
+                        setOpen(true);
+                      }}
+                      onDelete={() => {
+                        if (!window.confirm("Delete this ledger entry?")) return;
+                        update((d) => ({ ...d, ledger: d.ledger.filter((x) => x.id !== l.id) }));
+                      }}
+                    />
+                  </div>
+                </Td>
               </Row>
-            ))}
-          </Table>
-        </Panel>
+            ))
+          )}
+        </Table>
+      </Panel>
 
-        <div className="space-y-4">
-          <Panel title="Reports">
-            <div className="divide-y divide-ink-800">
-              {[
-                "Academy P&L",
-                "Branch by branch",
-                "Team by team",
-                "Coach payroll",
-                "Player collections",
-                "Merchandise margin",
-                "Aged receivables",
-              ].map((r) => (
-                <div key={r} className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-sm text-ink-200">{r}</span>
-                  <span className="font-mono text-[10px] text-court-400">RUN ›</span>
-                </div>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel title="Collections by branch">
-            <div className="space-y-3 p-4">
-              {[
-                ["Achrafieh", 94],
-                ["Jounieh", 88],
-                ["Broumana", 79],
-              ].map(([name, pct]) => (
-                <div key={name as string}>
-                  <div className="flex justify-between font-mono text-[11px] text-ink-200">
-                    <span>{name}</span>
-                    <span>{pct}%</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink-800">
-                    <div className="h-full bg-court-500" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Panel>
+      <Modal
+        open={open}
+        title={editing ? "Edit ledger entry" : "New ledger entry"}
+        onClose={() => setOpen(false)}
+        onSubmit={submit}
+        submitLabel={editing ? "Save changes" : "Add entry"}
+        wide
+      >
+        <div className="grid gap-3 p-4 sm:grid-cols-2">
+          <Field label="Date">
+            <Input type="date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
+          </Field>
+          <Field label="Account">
+            <Select
+              value={form.account}
+              onChange={(v) => setForm({ ...form, account: v })}
+              options={accounts}
+            />
+          </Field>
+          <Field label="Description">
+            <Input value={form.entry} onChange={(v) => setForm({ ...form, entry: v })} />
+          </Field>
+          <Field label="Type">
+            <Select
+              value={form.type}
+              onChange={(v) => setForm({ ...form, type: v as LedgerEntry["type"] })}
+              options={["Revenue", "Expense"]}
+            />
+          </Field>
+          <Field label="Amount" hint="USD, positive number">
+            <Input
+              type="number"
+              value={String(form.amount)}
+              onChange={(v) => setForm({ ...form, amount: Number(v) || 0 })}
+            />
+          </Field>
+          <Field label="Status">
+            <Select
+              value={form.status}
+              onChange={(v) => setForm({ ...form, status: v as LedgerEntry["status"] })}
+              options={["Collected", "Paid", "Pending"]}
+            />
+          </Field>
         </div>
-      </div>
+      </Modal>
     </AppShell>
   );
 }
