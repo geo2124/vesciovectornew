@@ -182,15 +182,12 @@ function GameApproval() {
 function PracticePlans() {
   const { db, update } = useDB();
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<Plan | null>(null);
+  const [review, setReview] = useState("");
   const [editing, setEditing] = useState<Plan | null>(null);
-  const [form, setForm] = useState<Omit<Plan, "id">>({
-    title: "",
-    category: "U-14",
-    coach: db.coaches[0]?.name ?? "",
-    focus: "",
-    date: new Date().toISOString().slice(0, 10),
-    status: "Draft",
-  });
+  const [form, setForm] = useState<PlanDraft>(
+    emptyPlan(db.coaches[0]?.name ?? "", db.lists["Age categories"]?.[0] ?? "U-14"),
+  );
 
   function submit() {
     if (!form.title.trim()) return;
@@ -202,9 +199,15 @@ function PracticePlans() {
     setOpen(false);
   }
 
-  function setStatus(id: string, status: Plan["status"]) {
-    update((d) => ({ ...d, plans: d.plans.map((p) => (p.id === id ? { ...p, status } : p)) }));
+  function setStatus(id: string, status: Plan["status"], note?: string) {
+    update((d) => ({
+      ...d,
+      plans: d.plans.map((p) =>
+        p.id === id ? { ...p, status, review: note === undefined ? p.review : note } : p,
+      ),
+    }));
   }
+
 
   return (
     <Panel
