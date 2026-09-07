@@ -15,24 +15,31 @@
   --font-ui: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   --font-sans: "Space Grotesk", sans-serif;
+}
 
-  --color-ink-950: oklch(0.18 0.012 260);
-  --color-ink-900: oklch(0.235 0.012 260);
-  --color-ink-850: oklch(0.262 0.013 260);
-  --color-ink-800: oklch(0.302 0.016 260);
-  --color-ink-700: oklch(0.362 0.018 260);
-  --color-ink-400: oklch(0.5 0.022 260);
-  --color-ink-300: oklch(0.65 0.02 258);
-  --color-ink-200: oklch(0.76 0.018 258);
-  --color-ink-100: oklch(0.88 0.01 258);
+/*
+ * Brand palette is driven by the Vescio Vector mark: teal on deep ink.
+ * Every surface/accent token is a runtime variable so the whole system
+ * flips between the dark and light themes with one class on <html>.
+ */
+@theme inline {
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
+  --color-ink-100: var(--ink-100);
 
-  --color-court-600: oklch(0.57 0.2 34);
-  --color-court-500: oklch(0.63 0.21 35);
-  --color-court-400: oklch(0.7 0.18 38);
+  --color-court-600: var(--court-600);
+  --color-court-500: var(--court-500);
+  --color-court-400: var(--court-400);
 
-  --color-good: oklch(0.72 0.15 158);
-  --color-warn: oklch(0.79 0.14 82);
-  --color-bad: oklch(0.63 0.19 22);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
 }
 
 @theme inline {
