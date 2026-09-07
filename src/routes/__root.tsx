@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/lib/theme";
 import { DataProvider } from "@/lib/data-store";
+import { AppearanceSync } from "@/lib/appearance";
 import {
   Outlet,
   Link,
@@ -129,6 +130,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <DataProvider>
+            <AppearanceSync />
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </DataProvider>
