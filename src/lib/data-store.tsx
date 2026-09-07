@@ -121,11 +121,20 @@ const seedUsers: UserAccount[] = [
   { id: "u5", name: "Karim Haddad", email: "karim@alba.io", role: "Coach", branch: "Achrafieh", method: "Google", active: true },
 ];
 
+const block = (name: string, minutes: number, notes = ""): PlanBlock => ({
+  id: `b-${name.toLowerCase().replace(/\W+/g, "-")}-${minutes}`,
+  name,
+  minutes,
+  notes,
+  drawing: null,
+});
+
 const seedPlans: Plan[] = [
-  { id: "pl1", title: "U-14 transition offence block", category: "U-14", coach: "Karim Haddad", focus: "Fast break spacing", date: "2026-05-18", status: "Approved" },
-  { id: "pl2", title: "U-16 girls defensive rotations", category: "U-16", coach: "Nour Sfeir", focus: "Help & recover", date: "2026-05-19", status: "Submitted" },
-  { id: "pl3", title: "U-12 fundamentals cycle", category: "U-12", coach: "Elie Mansour", focus: "Ball handling", date: "2026-05-20", status: "Draft" },
+  { id: "pl1", title: "U-14 transition offence block", category: "U-14", coach: "Karim Haddad", focus: "Fast break spacing", date: "2026-05-18", status: "Approved", review: "Great spacing progression — keep the 3v2 block.", blocks: [block("Warm-up", 10), block("Live 3v3", 25, "Full court, no dribble past half"), block("Shooting lines", 15), block("Cool down", 10)] },
+  { id: "pl2", title: "U-16 girls defensive rotations", category: "U-16", coach: "Nour Sfeir", focus: "Help & recover", date: "2026-05-19", status: "Submitted", review: "", blocks: [block("Warm-up", 12), block("Shell drill", 20, "Close-out and recover"), block("Scrimmage", 20)] },
+  { id: "pl3", title: "U-12 fundamentals cycle", category: "U-12", coach: "Elie Mansour", focus: "Ball handling", date: "2026-05-20", status: "Draft", review: "", blocks: [block("Warm-up", 10), block("Two-ball handling", 15)] },
 ];
+
 
 export const emptyDB = (): DB => ({
   academy: {
