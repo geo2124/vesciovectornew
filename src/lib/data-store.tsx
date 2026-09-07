@@ -235,6 +235,10 @@ type Ctx = {
   ready: boolean;
   update: (fn: (draft: DB) => DB) => void;
   resetDemo: () => void;
+  /** wipe every record, keep settings/appearance */
+  clearData: () => void;
+  /** put the demo records back */
+  loadDemo: () => void;
 };
 
 const DataCtx = createContext<Ctx | null>(null);
