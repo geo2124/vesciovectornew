@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
-type Point = { x: number; y: number };
-type Stroke = { color: string; width: number; dashed: boolean; points: Point[] };
+import { useEffect, useRef, useState } from "react";
 
 const W = 640;
 const H = 400;
@@ -14,11 +11,12 @@ const PENS = [
 ] as const;
 
 function drawCourt(ctx: CanvasRenderingContext2D, sport: string) {
+  ctx.save();
+  ctx.setLineDash([]);
   ctx.fillStyle = "#0b1220";
   ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = "rgba(148,163,184,0.55)";
   ctx.lineWidth = 2;
-  ctx.setLineDash([]);
   ctx.strokeRect(24, 24, W - 48, H - 48);
   ctx.beginPath();
   ctx.moveTo(W / 2, 24);
@@ -33,7 +31,7 @@ function drawCourt(ctx: CanvasRenderingContext2D, sport: string) {
       ctx.lineTo(x, H - 24);
       ctx.stroke();
     });
-    ctx.setLineDash([]);
+    ctx.restore();
     return;
   }
 
@@ -47,20 +45,18 @@ function drawCourt(ctx: CanvasRenderingContext2D, sport: string) {
       ctx.strokeRect(x, H / 2 - 80, dir * 90, 160);
       ctx.strokeRect(x, H / 2 - 40, dir * 36, 80);
     });
+    ctx.restore();
     return;
   }
 
-  // Basketball: keys, free-throw circles, three-point arcs
   [24, W - 24].forEach((x, i) => {
     const dir = i === 0 ? 1 : -1;
     ctx.strokeRect(x, H / 2 - 60, dir * 110, 120);
     ctx.beginPath();
     ctx.arc(x + dir * 110, H / 2, 40, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x + dir * 34, H / 2, 150, i === 0 ? -Math.PI / 2.3 : Math.PI / 1.78, i === 0 ? Math.PI / 2.3 : Math.PI * 1.44);
-    ctx.stroke();
   });
+  ctx.restore();
 }
 
 export function DrawingBoard({
@@ -73,49 +69,31 @@ export function DrawingBoard({
   sport?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [pen, setPen] = useState<(typeof PENS)[number]>(PENS[0]);
+  const history = useRef<string[]>([]);
   const drawing = useRef(false);
-  const loaded = useRef(false);
+  const initialised = useRef(false);
+  const [pen, setPen] = useState<(typeof PENS)[number]>(PENS[0]!);
 
-  const redraw = useCallback(
-    (list: Stroke[]) => {
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (!ctx) return;
-      drawCourt(ctx, sport);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      list.forEach((s) => {
-        ctx.strokeStyle = s.color;
-        ctx.lineWidth = s.width;
-        ctx.setLineDash(s.dashed ? [10, 8] : []);
-        ctx.beginPath();
-        s.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-        ctx.stroke();
-      });
-      ctx.setLineDash([]);
-    },
-    [sport],
-  );
-
-  // Restore a saved drawing once, as a background image behind new strokes.
+  // Paint the court once, then restore any saved drawing on top of it.
   useEffect(() => {
+    if (initialised.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
-    if (value && !loaded.current) {
-      loaded.current = true;
+    initialised.current = true;
+    drawCourt(ctx, sport);
+    if (value) {
       const img = new Image();
       img.onload = () => ctx.drawImage(img, 0, 0, W, H);
       img.src = value;
-      return;
     }
-    if (!value) redraw(strokes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, redraw]);
+  }, [sport, value]);
 
-  function pos(e: React.PointerEvent<HTMLCanvasElement>): Point {
+  function ctx2d() {
+    return canvasRef.current?.getContext("2d") ?? null;
+  }
+
+  function pos(e: React.PointerEvent<HTMLCanvasElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     return {
       x: ((e.clientX - rect.left) / rect.width) * W,
@@ -124,49 +102,29 @@ export function DrawingBoard({
   }
 
   function start(e: React.PointerEvent<HTMLCanvasElement>) {
+    const ctx = ctx2d();
+    const canvas = canvasRef.current;
+    if (!ctx || !canvas) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    history.current = [...history.current.slice(-19), canvas.toDataURL("image/png")];
     drawing.current = true;
-    setStrokes((prev) => [
-      ...prev,
-      { color: pen.color, width: 3, dashed: pen.dashed, points: [pos(e)] },
-    ]);
+    const p = pos(e);
+    ctx.strokeStyle = pen.color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.setLineDash(pen.dashed ? [10, 8] : []);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
   }
 
   function move(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!drawing.current) return;
-    const p = pos(e);
-    setStrokes((prev) => {
-      const next = prev.slice();
-      const last = next[next.length - 1];
-      if (last) next[next.length - 1] = { ...last, points: [...last.points, p] };
-      redrawWithBase(next);
-      return next;
-    });
-  }
-
-  function redrawWithBase(list: Stroke[]) {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
+    const ctx = ctx2d();
     if (!ctx) return;
-    if (value) {
-      const img = new Image();
-      img.src = value;
-      drawCourt(ctx, sport);
-      if (img.complete) ctx.drawImage(img, 0, 0, W, H);
-    } else {
-      drawCourt(ctx, sport);
-    }
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    list.forEach((s) => {
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = s.width;
-      ctx.setLineDash(s.dashed ? [10, 8] : []);
-      ctx.beginPath();
-      s.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-      ctx.stroke();
-    });
-    ctx.setLineDash([]);
+    const p = pos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
   }
 
   function end() {
@@ -176,22 +134,31 @@ export function DrawingBoard({
     if (canvas) onChange(canvas.toDataURL("image/png"));
   }
 
+  function restore(dataUrl: string | null) {
+    const ctx = ctx2d();
+    const canvas = canvasRef.current;
+    if (!ctx || !canvas) return;
+    drawCourt(ctx, sport);
+    if (!dataUrl) {
+      onChange(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, W, H);
+      onChange(canvas.toDataURL("image/png"));
+    };
+    img.src = dataUrl;
+  }
+
   function undo() {
-    setStrokes((prev) => {
-      const next = prev.slice(0, -1);
-      redrawWithBase(next);
-      const canvas = canvasRef.current;
-      if (canvas) onChange(next.length || value ? canvas.toDataURL("image/png") : null);
-      return next;
-    });
+    const prev = history.current.pop();
+    restore(prev ?? null);
   }
 
   function clear() {
-    loaded.current = true;
-    setStrokes([]);
-    const ctx = canvasRef.current?.getContext("2d");
-    if (ctx) drawCourt(ctx, sport);
-    onChange(null);
+    history.current = [];
+    restore(null);
   }
 
   return (
@@ -203,7 +170,9 @@ export function DrawingBoard({
             type="button"
             onClick={() => setPen(p)}
             className={`flex items-center gap-1.5 rounded px-2 py-1 font-mono text-[10px] uppercase tracking-widest ring-1 ${
-              pen.key === p.key ? "bg-ink-900 text-ink-100 ring-court-500" : "text-ink-300 ring-ink-700"
+              pen.key === p.key
+                ? "bg-ink-900 text-ink-100 ring-court-500"
+                : "text-ink-300 ring-ink-700"
             }`}
           >
             <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
