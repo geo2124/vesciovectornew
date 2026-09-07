@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountingRouteImport } from './routes/accounting'
 import { Route as BranchesRouteImport } from './routes/branches'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CoachesRouteImport } from './routes/coaches'
 import { Route as MerchandiseRouteImport } from './routes/merchandise'
 import { Route as PersonnelRouteImport } from './routes/personnel'
@@ -41,6 +42,11 @@ const BranchesRoute = BranchesRouteImport.update({
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoachRoute = CoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachesRoute = CoachesRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/accounting': typeof AccountingRoute
   '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
+  '/coach': typeof CoachRoute
   '/coaches': typeof CoachesRoute
   '/merchandise': typeof MerchandiseRoute
   '/personnel': typeof PersonnelRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/accounting': typeof AccountingRoute
   '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
+  '/coach': typeof CoachRoute
   '/coaches': typeof CoachesRoute
   '/merchandise': typeof MerchandiseRoute
   '/personnel': typeof PersonnelRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/accounting': typeof AccountingRoute
   '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
+  '/coach': typeof CoachRoute
   '/coaches': typeof CoachesRoute
   '/merchandise': typeof MerchandiseRoute
   '/personnel': typeof PersonnelRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/accounting'
     | '/branches'
     | '/calendar'
+    | '/coach'
     | '/coaches'
     | '/merchandise'
     | '/personnel'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/accounting'
     | '/branches'
     | '/calendar'
+    | '/coach'
     | '/coaches'
     | '/merchandise'
     | '/personnel'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/accounting'
     | '/branches'
     | '/calendar'
+    | '/coach'
     | '/coaches'
     | '/merchandise'
     | '/personnel'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   AccountingRoute: typeof AccountingRoute
   BranchesRoute: typeof BranchesRoute
   CalendarRoute: typeof CalendarRoute
+  CoachRoute: typeof CoachRoute
   CoachesRoute: typeof CoachesRoute
   MerchandiseRoute: typeof MerchandiseRoute
   PersonnelRoute: typeof PersonnelRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coach': {
+      id: '/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof CoachRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coaches': {
@@ -300,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountingRoute: AccountingRoute,
   BranchesRoute: BranchesRoute,
   CalendarRoute: CalendarRoute,
+  CoachRoute: CoachRoute,
   CoachesRoute: CoachesRoute,
   MerchandiseRoute: MerchandiseRoute,
   PersonnelRoute: PersonnelRoute,
