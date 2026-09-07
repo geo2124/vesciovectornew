@@ -241,7 +241,11 @@ type Ctx = {
   loadDemo: () => void;
 };
 
-const DataCtx = createContext<Ctx | null>(null);
+// Keep a single context instance across HMR updates and split route chunks,
+// otherwise a reloaded module creates a second context and useDB sees null.
+const g = globalThis as unknown as { __vvDataCtx?: React.Context<Ctx | null> };
+const DataCtx: React.Context<Ctx | null> =
+  g.__vvDataCtx ?? (g.__vvDataCtx = createContext<Ctx | null>(null));
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<DB>(() => emptyDB());
