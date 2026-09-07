@@ -286,21 +286,24 @@ export function Select({
   value,
   onChange,
   options,
+  labels,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
+  labels?: Record<string, string> | undefined;
 }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} className={controlCls}>
       {options.map((o) => (
         <option key={o} value={o} className="bg-ink-900 text-ink-100">
-          {o}
+          {labels?.[o] ?? o}
         </option>
       ))}
     </select>
   );
 }
+
 
 export function Toggle({
   on,
