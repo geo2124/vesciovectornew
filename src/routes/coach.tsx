@@ -135,10 +135,7 @@ function CoachPortal() {
             <span className="font-mono text-[9px] uppercase tracking-widest">{t}</span>
           </button>
         ))}
-      </nav>
-      {/* keep update referenced for child closures */}
-      <span className="hidden">{typeof update}</span>
-    </div>
+      </nav>    </div>
   );
 }
 
