@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Chip, Field, Input, Select } from "@/components/kit";
+import { PlanEditor, PlanView, emptyPlan } from "@/components/plan-editor";
+import type { PlanDraft } from "@/components/plan-editor";
 import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
 import { ThemeToggle } from "@/lib/theme";
 import { useDB } from "@/lib/data-store";
