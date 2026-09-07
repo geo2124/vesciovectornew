@@ -283,7 +283,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const resetDemo = useCallback(() => persist(emptyDB()), [persist]);
 
-  const value = useMemo(() => ({ db, ready, update, resetDemo }), [db, ready, update, resetDemo]);
+  const clearData = useCallback(
+    () => persist({ ...blankDB(), academy: db.academy, appearance: db.appearance, lists: db.lists }),
+    [persist, db.academy, db.appearance, db.lists],
+  );
+
+  const loadDemo = useCallback(
+    () => persist({ ...emptyDB(), academy: db.academy, appearance: db.appearance }),
+    [persist, db.academy, db.appearance],
+  );
+
+  const value = useMemo(
+    () => ({ db, ready, update, resetDemo, clearData, loadDemo }),
+    [db, ready, update, resetDemo, clearData, loadDemo],
+  );
   return <DataCtx.Provider value={value}>{children}</DataCtx.Provider>;
 }
 
