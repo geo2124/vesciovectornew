@@ -238,3 +238,104 @@ export function money(n: number) {
   const sign = n < 0 ? "-" : "";
   return `${sign}$${Math.abs(n).toLocaleString()}`;
 }
+
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="label-mono">{label}</span>
+      {children}
+      {hint ? <span className="mt-1 block font-mono text-[10px] text-ink-400">{hint}</span> : null}
+    </label>
+  );
+}
+
+const controlCls =
+  "mt-1.5 w-full rounded-md bg-ink-850 px-3 py-2 font-ui text-sm text-ink-100 ring-1 ring-ink-700 placeholder:text-ink-400 focus:outline-none focus:ring-court-500/60";
+
+export function Input({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      placeholder={placeholder ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      className={controlCls}
+    />
+  );
+}
+
+export function Select({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={controlCls}>
+      {options.map((o) => (
+        <option key={o} value={o} className="bg-ink-900 text-ink-100">
+          {o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function Toggle({
+  on,
+  onChange,
+  label,
+  note,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  note?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!on)}
+      className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left ring-1 transition-colors ${
+        on ? "bg-court-500/10 ring-court-500/40" : "bg-ink-850 ring-ink-700"
+      }`}
+    >
+      <span
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+          on ? "bg-court-500" : "bg-ink-700"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-ink-950 transition-all ${
+            on ? "left-4.5" : "left-0.5"
+          }`}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm text-ink-100">{label}</span>
+        {note ? <span className="block font-mono text-[10px] text-ink-400">{note}</span> : null}
+      </span>
+    </button>
+  );
+}
