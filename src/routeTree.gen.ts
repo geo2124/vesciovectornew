@@ -10,14 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BranchesRouteImport } from './routes/branches'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CoachesRouteImport } from './routes/coaches'
+import { Route as MerchandiseRouteImport } from './routes/merchandise'
+import { Route as PersonnelRouteImport } from './routes/personnel'
 import { Route as PlayersRouteImport } from './routes/players'
+import { Route as SessionsRouteImport } from './routes/sessions'
 import { Route as TeamsRouteImport } from './routes/teams'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BranchesRoute = BranchesRouteImport.update({
+  id: '/branches',
+  path: '/branches',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarRoute = CalendarRouteImport.update({
@@ -30,9 +39,24 @@ const CoachesRoute = CoachesRouteImport.update({
   path: '/coaches',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MerchandiseRoute = MerchandiseRouteImport.update({
+  id: '/merchandise',
+  path: '/merchandise',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonnelRoute = PersonnelRouteImport.update({
+  id: '/personnel',
+  path: '/personnel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayersRoute = PlayersRouteImport.update({
   id: '/players',
   path: '/players',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionsRoute = SessionsRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamsRoute = TeamsRouteImport.update({
@@ -43,39 +67,83 @@ const TeamsRoute = TeamsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
   '/coaches': typeof CoachesRoute
+  '/merchandise': typeof MerchandiseRoute
+  '/personnel': typeof PersonnelRoute
   '/players': typeof PlayersRoute
+  '/sessions': typeof SessionsRoute
   '/teams': typeof TeamsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
   '/coaches': typeof CoachesRoute
+  '/merchandise': typeof MerchandiseRoute
+  '/personnel': typeof PersonnelRoute
   '/players': typeof PlayersRoute
+  '/sessions': typeof SessionsRoute
   '/teams': typeof TeamsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/branches': typeof BranchesRoute
   '/calendar': typeof CalendarRoute
   '/coaches': typeof CoachesRoute
+  '/merchandise': typeof MerchandiseRoute
+  '/personnel': typeof PersonnelRoute
   '/players': typeof PlayersRoute
+  '/sessions': typeof SessionsRoute
   '/teams': typeof TeamsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/calendar' | '/coaches' | '/players' | '/teams'
+  fullPaths:
+    | '/'
+    | '/branches'
+    | '/calendar'
+    | '/coaches'
+    | '/merchandise'
+    | '/personnel'
+    | '/players'
+    | '/sessions'
+    | '/teams'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/calendar' | '/coaches' | '/players' | '/teams'
-  id: '__root__' | '/' | '/calendar' | '/coaches' | '/players' | '/teams'
+  to:
+    | '/'
+    | '/branches'
+    | '/calendar'
+    | '/coaches'
+    | '/merchandise'
+    | '/personnel'
+    | '/players'
+    | '/sessions'
+    | '/teams'
+  id:
+    | '__root__'
+    | '/'
+    | '/branches'
+    | '/calendar'
+    | '/coaches'
+    | '/merchandise'
+    | '/personnel'
+    | '/players'
+    | '/sessions'
+    | '/teams'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BranchesRoute: typeof BranchesRoute
   CalendarRoute: typeof CalendarRoute
   CoachesRoute: typeof CoachesRoute
+  MerchandiseRoute: typeof MerchandiseRoute
+  PersonnelRoute: typeof PersonnelRoute
   PlayersRoute: typeof PlayersRoute
+  SessionsRoute: typeof SessionsRoute
   TeamsRoute: typeof TeamsRoute
 }
 
@@ -86,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/branches': {
+      id: '/branches'
+      path: '/branches'
+      fullPath: '/branches'
+      preLoaderRoute: typeof BranchesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar': {
@@ -102,11 +177,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/merchandise': {
+      id: '/merchandise'
+      path: '/merchandise'
+      fullPath: '/merchandise'
+      preLoaderRoute: typeof MerchandiseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personnel': {
+      id: '/personnel'
+      path: '/personnel'
+      fullPath: '/personnel'
+      preLoaderRoute: typeof PersonnelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/players': {
       id: '/players'
       path: '/players'
       fullPath: '/players'
       preLoaderRoute: typeof PlayersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sessions': {
+      id: '/sessions'
+      path: '/sessions'
+      fullPath: '/sessions'
+      preLoaderRoute: typeof SessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/teams': {
@@ -121,9 +217,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BranchesRoute: BranchesRoute,
   CalendarRoute: CalendarRoute,
   CoachesRoute: CoachesRoute,
+  MerchandiseRoute: MerchandiseRoute,
+  PersonnelRoute: PersonnelRoute,
   PlayersRoute: PlayersRoute,
+  SessionsRoute: SessionsRoute,
   TeamsRoute: TeamsRoute,
 }
 export const routeTree = rootRouteImport
