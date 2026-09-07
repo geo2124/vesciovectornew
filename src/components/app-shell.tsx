@@ -68,9 +68,7 @@ export function AppShell({
     <div className="mx-auto grid min-h-screen max-w-[1560px] lg:grid-cols-[248px_1fr]">
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-ink-800 bg-ink-950 lg:flex">
         <div className="flex h-16 items-center gap-3 border-b border-ink-800 px-5">
-          <div className="grid h-9 w-9 -rotate-6 place-items-center bg-court-500">
-            <span className="font-display text-lg leading-none text-ink-950">V</span>
-          </div>
+          <img src={markAsset.url} alt="Vescio Vector" className="h-9 w-9 object-contain" />
           <div className="leading-none">
             <div className="font-display text-[15px] tracking-tight text-ink-100">VESCIO</div>
             <div className="mt-1 font-mono text-[9px] tracking-[0.3em] text-court-400">VECTOR</div>

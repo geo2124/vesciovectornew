@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button, Chip, FieldGrid, Panel } from "@/components/kit";
+import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -134,9 +135,7 @@ function UiSettings() {
           <div className="label-mono mb-2">Live preview</div>
           <div className="rounded-md bg-ink-850 p-3 ring-1 ring-ink-700">
             <div className="flex items-center gap-2">
-              <span className="grid h-7 w-7 -rotate-6 place-items-center bg-court-500 font-display text-xs text-ink-950">
-                V
-              </span>
+              <img src={markAsset.url} alt="Vescio Vector" className="h-7 w-7 object-contain" />
               <span className="font-display text-sm text-ink-100">Alba Academy</span>
             </div>
             <div className="mt-3 flex gap-2">

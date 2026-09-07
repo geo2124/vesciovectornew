@@ -26,4 +26,4 @@
 - [ ] WhatsApp broadcast groups
 
 ## Open items
-- [ ] Awaiting the Vescio Vector logo file from the user
+- [x] Logo received — Vescio Vector mark extracted, used in app shell, coach portal and favicon

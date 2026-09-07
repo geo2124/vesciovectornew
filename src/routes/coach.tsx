@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Chip } from "@/components/kit";
+import markAsset from "@/assets/vescio-vector-mark.png.asset.json";
 import { players, sessions } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/coach")({
@@ -36,9 +37,7 @@ function CoachPortal() {
     <div className="min-h-screen bg-ink-950">
       <div className="mx-auto min-h-screen max-w-md border-x border-ink-800 bg-ink-950 pb-24">
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-ink-800 bg-ink-950/95 px-4 py-3 backdrop-blur">
-          <div className="grid h-8 w-8 -rotate-6 place-items-center bg-court-500">
-            <span className="font-display text-sm leading-none text-ink-950">V</span>
-          </div>
+          <img src={markAsset.url} alt="Vescio Vector" className="h-8 w-8 object-contain" />
           <div className="leading-tight">
             <div className="font-display text-sm tracking-tight text-ink-100">Coach Portal</div>
             <div className="font-mono text-[9px] tracking-[0.25em] text-court-400">/COACH</div>
