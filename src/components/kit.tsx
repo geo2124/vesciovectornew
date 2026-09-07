@@ -339,3 +339,183 @@ export function Toggle({
     </button>
   );
 }
+
+export function Textarea({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <textarea
+      rows={rows}
+      value={value}
+      placeholder={placeholder ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      className={controlCls}
+    />
+  );
+}
+
+export function Modal({
+  open,
+  title,
+  meta,
+  onClose,
+  onSubmit,
+  submitLabel = "Save",
+  wide,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  meta?: string | undefined;
+  onClose: () => void;
+  onSubmit?: (() => void) | undefined;
+  submitLabel?: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+      <div
+        className={`panel max-h-[92vh] w-full overflow-y-auto rounded-b-none sm:rounded-lg ${
+          wide ? "sm:max-w-3xl" : "sm:max-w-xl"
+        }`}
+      >
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-ink-800 bg-ink-900/95 px-4 py-3 backdrop-blur">
+          <div>
+            <h2 className="font-display text-base tracking-tight text-ink-100">{title}</h2>
+            {meta ? <div className="label-mono mt-0.5">{meta}</div> : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="ml-auto rounded-md px-2 py-1 font-mono text-sm text-ink-300 hover:bg-ink-850"
+          >
+            ✕
+          </button>
+        </header>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit?.();
+          }}
+        >
+          {children}
+          {onSubmit ? (
+            <div className="sticky bottom-0 flex gap-2 border-t border-ink-800 bg-ink-900/95 px-4 py-3 backdrop-blur">
+              <Button type="submit">{submitLabel}</Button>
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          ) : null}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export function RowActions({
+  onEdit,
+  onDelete,
+  extra,
+}: {
+  onEdit?: () => void;
+  onDelete?: () => void;
+  extra?: ReactNode;
+}) {
+  return (
+    <span className="flex items-center justify-end gap-1">
+      {extra}
+      {onEdit ? (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="rounded px-2 py-1 font-mono text-[10px] tracking-wide text-ink-300 ring-1 ring-ink-700 hover:bg-ink-850 hover:text-ink-100"
+        >
+          EDIT
+        </button>
+      ) : null}
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded px-2 py-1 font-mono text-[10px] tracking-wide text-bad ring-1 ring-ink-700 hover:bg-bad/10"
+        >
+          DEL
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+export function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded bg-ink-850 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-widest text-ink-200 ring-1 ring-ink-700 focus:outline-none focus:ring-court-500/60"
+    >
+      <option value="">{label}: ALL</option>
+      {options.map((o) => (
+        <option key={o} value={o} className="bg-ink-900">
+          {o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function Search({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative w-full sm:w-72">
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-md bg-ink-850 py-2 pl-9 pr-3 font-ui text-sm text-ink-100 ring-1 ring-ink-700 placeholder:text-ink-400 focus:outline-none focus:ring-court-500/60"
+        placeholder={placeholder}
+      />
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-ink-400">
+        ⌕
+      </span>
+    </div>
+  );
+}
+
+export function EmptyState({ children }: { children: ReactNode }) {
+  return (
+    <tr>
+      <td colSpan={12} className="px-4 py-10 text-center font-mono text-[11px] text-ink-400">
+        {children}
+      </td>
+    </tr>
+  );
+}
