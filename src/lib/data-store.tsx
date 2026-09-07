@@ -50,6 +50,15 @@ export type UserAccount = {
   active: boolean;
 };
 
+export type PlanBlock = {
+  id: string;
+  name: string;
+  minutes: number;
+  notes: string;
+  /** PNG data URL from the drill drawing board */
+  drawing: string | null;
+};
+
 export type Plan = {
   id: string;
   title: string;
@@ -58,7 +67,11 @@ export type Plan = {
   focus: string;
   date: string;
   status: "Draft" | "Submitted" | "Approved" | "Rejected";
+  blocks: PlanBlock[];
+  /** technical director feedback */
+  review: string;
 };
+
 
 export type Academy = {
   name: string;
